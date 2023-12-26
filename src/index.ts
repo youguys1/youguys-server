@@ -46,12 +46,13 @@ const http = Http.createServer(app);
 // eslint-disable-next-line @typescript-eslint/no-unsafe-call
 const ioServer = new SocketIOServer(http);
 const connections = new Map();
+const ids = new Set();
 const roomCodeToGame = new Map();
 
 // TODO handle disconnections
 ioServer.on('connection', function (socket: Socket) {
     console.log("someone connected");
-    connections.set(socket.id, socket);
+
     console.log(connections.size);
     socket.on('authenticate', async ({ token }) => {
 
@@ -59,6 +60,11 @@ ioServer.on('connection', function (socket: Socket) {
         const { id, email } = await getInfoFromToken(token);
         if (!id) {
             socket.emit("not_authenticated");
+            socket.disconnect();
+            return;
+        }
+        if (ids.has(id)) {
+            socket.emit("already_playing");
             socket.disconnect();
             return;
         }
@@ -77,10 +83,13 @@ ioServer.on('connection', function (socket: Socket) {
             game = new Game([], roomCode, teamId, numPlayers, roomCodeToGame, pool);
             roomCodeToGame.set(roomCode, game);
         }
+        ids.add(id);
+        connections.set(socket.id, id);
         socket.emit("authenticated");
         game.addPlayer(newPlayer);
     })
     socket.on('disconnect', function () {
+        ids.delete(connections.get(socket.id));
         connections.delete(socket.id);
 
         console.log("someone disconnected.");
