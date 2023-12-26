@@ -39,7 +39,7 @@ async function getTeamInfo(id: number) {
             numPlayers += 1
         }
     }
-    return { roomCode: row.team_code, numPlayers: numPlayers };
+    return { roomCode: row.team_code, numPlayers: numPlayers, teamId: row.id };
 }
 
 const http = Http.createServer(app);
@@ -63,9 +63,9 @@ ioServer.on('connection', function (socket: Socket) {
             socket.disconnect();
             return;
         }
-        socket.emit("authenticated");
+
         const newPlayer = new Player(socket, email);
-        const { roomCode, numPlayers } = await getTeamInfo(id);
+        const { roomCode, numPlayers, teamId } = await getTeamInfo(id);
         if (numPlayers < 2 || numPlayers > 5) {
             socket.emit("invalid_num_of_players");
             socket.disconnect();
@@ -75,9 +75,10 @@ ioServer.on('connection', function (socket: Socket) {
             game = roomCodeToGame.get(roomCode);
         }
         else {
-            game = new Game([], roomCode, numPlayers, roomCodeToGame, pool);
+            game = new Game([], roomCode, teamId, numPlayers, roomCodeToGame, pool);
             roomCodeToGame.set(roomCode, game);
         }
+        socket.emit("authenticated");
         game.addPlayer(newPlayer);
     })
     socket.on('disconnect', function () {
@@ -88,14 +89,6 @@ ioServer.on('connection', function (socket: Socket) {
 
     });
 });
-// what does the server need to do?
-// it needs to group people into teams, and allow everyone to ready up.
-// how do we figure out whos on what team? well, we can get your token
-// use it  to authenticate you, but how do we figure out who you are?
-// we cant let you tell us who you are, can we? like no. We cou
-// const manager = new ProtocolManager();
-
-// configureListeners(ioServer, manager);
 
 ioServer.listen(http, { cors: { origin: 'http://localhost:3000' } })
 
