@@ -63,9 +63,10 @@ ioServer.on('connection', function (socket: Socket) {
             socket.disconnect();
             return;
         }
+        socket.emit("authenticated");
         const newPlayer = new Player(socket, email);
         const { roomCode, numPlayers } = await getTeamInfo(id);
-        if (numPlayers < 2 || numPlayers > 5){
+        if (numPlayers < 2 || numPlayers > 5) {
             socket.emit("invalid_num_of_players");
             socket.disconnect();
         }
@@ -74,7 +75,7 @@ ioServer.on('connection', function (socket: Socket) {
             game = roomCodeToGame.get(roomCode);
         }
         else {
-            game = new Game([], roomCode, numPlayers, roomCodeToGame);
+            game = new Game([], roomCode, numPlayers, roomCodeToGame, pool);
             roomCodeToGame.set(roomCode, game);
         }
         game.addPlayer(newPlayer);
@@ -96,7 +97,7 @@ ioServer.on('connection', function (socket: Socket) {
 
 // configureListeners(ioServer, manager);
 
-ioServer.listen(http, { cors: { origin: 'http://localhost' } })
+ioServer.listen(http, { cors: { origin: 'http://localhost:3000' } })
 
 http.listen(port, () => {
     console.log('Express server started on port: ' + port);

@@ -1,3 +1,4 @@
+import { Pool } from "pg";
 import Player from "./Player";
 
 class Game {
@@ -9,9 +10,10 @@ class Game {
     public turns_played: number;
     public NUM_TURNS = 100;
     public currentGames: Map<string, Game>;
+    private pool: Pool;
 
 
-    constructor(players: Array<Player>, roomCode: string, team_size: number, currentGames: Map<string, Game>) {
+    constructor(players: Array<Player>, roomCode: string, team_size: number, currentGames: Map<string, Game>, pool: Pool) {
         this.players = players;
         this.roomCode = roomCode;
         this.currentTurn = 0;
@@ -19,11 +21,11 @@ class Game {
         this.turns_played = 0;
         this.team_size = team_size;
         this.currentGames = new Map();
+        this.pool = pool;
     }
 
     addPlayer(player: Player) {
         this.players.push(player);
-        // player.configureSocket(this.roomCode); // joins the room
         player.socket.join(this.roomCode);
         player.socket.on("player_ready", () => {
             player.ready = true;
@@ -52,7 +54,7 @@ class Game {
             this.players[i].socket.emit("game_start", {
                 currentTurn: this.players[this.currentTurn].email
             });
-            this.players[i].socket.on("play_turn", (sentence) => {
+            this.players[i].socket.on("play_turn", (sentence) => { // the million dollar question: will it lock in the value of i or no?
                 if (this.currentTurn != i) {
                     this.players[i].socket.emit("not_your_turn");
                 }
