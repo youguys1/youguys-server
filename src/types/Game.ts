@@ -12,6 +12,7 @@ class Game {
     public NUM_TURNS = 100;
     public currentGames: Map<string, Game>;
     private pool: Pool;
+    private numReadys: number;
 
 
     constructor(players: Array<Player>, roomCode: string, teamId: number, teamSize: number, currentGames: Map<string, Game>, pool: Pool) {
@@ -24,6 +25,7 @@ class Game {
         this.teamId = teamId;
         this.currentGames = currentGames;
         this.pool = pool;
+        this.numReadys = 0;
     }
 
     addPlayer(player: Player) {
@@ -31,12 +33,20 @@ class Game {
         player.socket.join(this.roomCode);
         player.socket.on("player_ready", () => {
             player.ready = true;
-            player.socket.to(this.roomCode).emit("player_ready", player.email);
+            this.numReadys += 1;
+            player.socket.to(this.roomCode).emit("player_ready", {
+                player: player.email,
+                numReadys: this.numReadys,
+            });
             this.newPlayerReady();
         });
         player.socket.on("player_not_ready", () => {
             player.ready = false;
-            player.socket.to(this.roomCode).emit("player_not_ready", player.email);
+            this.numReadys -= 1
+            player.socket.to(this.roomCode).emit("player_not_ready", {
+                player: player.email,
+                numReadys: this.numReadys,
+            });
         });
     }
 
@@ -49,7 +59,10 @@ class Game {
                 return;
             }
         }
-        this.startGame();
+        if (this.numReadys == this.teamSize) {
+            this.startGame();
+
+        }
     }
     startGame() {
         for (let i = 0; i < this.players.length; i++) {
