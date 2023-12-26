@@ -28,6 +28,9 @@ const pool = new Pool({
 // });
 async function getInfoFromToken(token: string) {
     const result = await pool.query('SELECT "userId", email from sessions INNER JOIN users ON users.id = "userId" WHERE "sessionToken"=$1 AND expires > CURRENT_DATE LIMIT 1', [token]);
+    if (result.rows.length == 0) {
+        return { id: null };
+    }
     return { id: result.rows[0].userId, email: result.rows[0].email };
 }
 async function getTeamInfo(id: number) {
