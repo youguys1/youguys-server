@@ -31,7 +31,7 @@ async function getInfoFromToken(token: string) {
     return { id: result.rows[0].userId, email: result.rows[0].email };
 }
 async function getTeamInfo(id: number) {
-    const result = await pool.query('SELECT * FROM teams WHERE $1 in (user1_id, user2_id, user3_id, user4_id, user5_id)', [id]);
+    const result = await pool.query('SELECT * FROM teams WHERE $1 in (user1_id, user2_id, user3_id, user4_id, user5_id) AND is_active=TRUE LIMIT 1', [id]);
     const row = result.rows[0];
     let numPlayers = 0;
     for (let userId of [row.user1_id, row.user2_id, row.user3_id, row.user4_id, row.user5_id]) {
@@ -55,7 +55,6 @@ ioServer.on('connection', function (socket: Socket) {
     console.log(connections.size);
     socket.on('authenticate', async ({ token }) => {
 
-        console.log("someone sent a authenticate")
         console.log(token);
         const { id, email } = await getInfoFromToken(token);
         if (!id) {
