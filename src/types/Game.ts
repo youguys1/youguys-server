@@ -77,10 +77,13 @@ class Game {
                     this.document += sentence;
                     this.currentTurn = (this.currentTurn + 1) % this.players.length;
                     this.turnsPlayed += 1;
-                    this.players[i].socket.to(this.roomCode).emit("turn_played", {
-                        currentTurn: this.players[this.currentTurn].email,
-                        sentence: sentence
-                    });
+                    for (let j = 0; j < this.players.length; j++) {
+                        this.players[j].socket.to(this.roomCode).emit("turn_played", {
+                            currentTurn: this.players[this.currentTurn].email,
+                            sentence: sentence
+                        });
+                    }
+
                     if (this.turnsPlayed >= this.NUM_TURNS) {
                         this.gameOver();
                     }
