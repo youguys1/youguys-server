@@ -1,17 +1,10 @@
 import './preStart'; // Must be the first import
 import app from '@server';
-// import logger from '@shared/Logger';
-// SocketIO Server
 import Http from 'http';
 import { Pool } from 'pg';
-import Player from "./types/Player";
-
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import Game from './types/Game';
-// import ProtocolManager from "./io/ProtocolManager";
-// import configureListeners from "./io/configureListeners";
+import Orchestrator from './types/Orchestrator';
 
-// Express Server
 const port = Number(process.env.PORT || 3001);
 const pool = new Pool({
     host: process.env.PG_HOST,
@@ -23,82 +16,15 @@ const pool = new Pool({
     ssl: {
         rejectUnauthorized: false
     }
-});// app.listen(port, () => {
-//     logger.info('Express server started on port: ' + port);
-// });
-async function getInfoFromToken(token: string) {
-    const result = await pool.query('SELECT "userId", email from sessions INNER JOIN users ON users.id = "userId" WHERE "sessionToken"=$1 AND expires > CURRENT_DATE LIMIT 1', [token]);
-    if (result.rows.length == 0) {
-        return { id: null };
-    }
-    return { id: result.rows[0].userId, email: result.rows[0].email };
-}
-async function getTeamInfo(id: number) {
-    const result = await pool.query('SELECT * FROM teams WHERE $1 in (user1_id, user2_id, user3_id, user4_id, user5_id) AND is_active=TRUE LIMIT 1', [id]);
-    const row = result.rows[0];
-    let numPlayers = 0;
-    for (let userId of [row.user1_id, row.user2_id, row.user3_id, row.user4_id, row.user5_id]) {
-        if (userId) {
-            numPlayers += 1
-        }
-    }
-    return { roomCode: row.team_code, numPlayers: numPlayers, teamId: row.id };
-}
+});
 
 const http = Http.createServer(app);
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 const ioServer = new SocketIOServer(http);
-const connections = new Map();
-const ids = new Set();
-const roomCodeToGame = new Map();
+const orchestrator = new Orchestrator(pool);
 
 // TODO handle disconnections
 ioServer.on('connection', function (socket: Socket) {
-    console.log("someone connected");
-
-    console.log(connections.size);
-    socket.on('authenticate', async ({ token }) => {
-
-        console.log(token);
-        const { id, email } = await getInfoFromToken(token);
-        if (!id) {
-            socket.emit("not_authenticated");
-            socket.disconnect();
-            return;
-        }
-        if (ids.has(id)) {
-            socket.emit("already_playing");
-            socket.disconnect();
-            return;
-        }
-
-        const newPlayer = new Player(socket, email);
-        const { roomCode, numPlayers, teamId } = await getTeamInfo(id);
-        if (numPlayers < 2 || numPlayers > 5) {
-            socket.emit("invalid_num_of_players");
-            socket.disconnect();
-        }
-        let game;
-        if (roomCodeToGame.has(roomCode)) {
-            game = roomCodeToGame.get(roomCode);
-        }
-        else {
-            game = new Game([], roomCode, teamId, numPlayers, roomCodeToGame, pool);
-            roomCodeToGame.set(roomCode, game);
-        }
-        ids.add(id);
-        connections.set(socket.id, id);
-        socket.emit("authenticated");
-        game.addPlayer(newPlayer);
-    })
-    socket.on('disconnect', function () {
-        ids.delete(connections.get(socket.id));
-        connections.delete(socket.id);
-
-        console.log("someone disconnected.");
-        console.log(connections.size);
-
-    });
+    orchestrator.newConnection(socket);
 });
 
 ioServer.listen(http, { cors: { origin: 'http://localhost:3000' } })
