@@ -66,6 +66,8 @@ class Game {
     }
     startGame() {
         for (let i = 0; i < this.players.length; i++) {
+            this.players[i].socket.removeAllListeners("player_ready");
+            this.players[i].socket.removeAllListeners("player_not_ready");
             this.players[i].socket.emit("game_start", {
                 currentTurn: this.players[this.currentTurn].email
             });
