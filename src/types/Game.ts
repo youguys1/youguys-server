@@ -78,7 +78,7 @@ class Game {
                     this.currentTurn = (this.currentTurn + 1) % this.players.length;
                     this.turnsPlayed += 1;
                     for (let j = 0; j < this.players.length; j++) {
-                        this.players[j].socket.to(this.roomCode).emit("turn_played", {
+                        this.players[j].socket.emit("turn_played", {
                             currentTurn: this.players[this.currentTurn].email,
                             sentence: sentence
                         });
