@@ -8,7 +8,6 @@ class Game {
     private document: string;
     private turnsPlayed: number;
     private NUM_TURNS = 100;
-    private numReadys: number;
     private gameFinishedCallback: Function;
 
 
@@ -18,26 +17,10 @@ class Game {
         this.currentTurn = 0;
         this.document = "";
         this.turnsPlayed = 0;
-        this.numReadys = 0;
         this.gameFinishedCallback = gameFinishedCallback;
         this.startGame();
     }
 
-
-    // private newPlayerReady() {
-    //     if (this.players.length != this.teamSize) {
-    //         return;
-    //     }
-    //     for (let player of this.players) {
-    //         if (player.ready == false) {
-    //             return;
-    //         }
-    //     }
-    //     if (this.numReadys == this.teamSize) {
-    //         this.startGame();
-
-    //     }
-    // }
     private startGame() {
         console.log("Starting game for " + this.roomCode);
         for (let i = 0; i < this.players.length; i++) {
