@@ -17,6 +17,7 @@ class Orchestrator {
         this.connections = new Map();
         this.ids = new Set();
         this.roomCodeToGame = new Map();
+        this.roomCodeToLobby = new Map();
         this.pool = pool;
     }
 
