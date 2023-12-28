@@ -14,7 +14,6 @@ class Lobby {
     private players: Array<Player>;
     private playerIds: Array<number>;
     private roomCode: string;
-    private teamId: number;
     private teamCreationTime: Date;
     // private currentTurn: number;
     // private document: string;
@@ -25,14 +24,13 @@ class Lobby {
     private lobbyFinishedCallback: Function;
 
 
-    constructor(players: Array<Player>, roomCode: string, teamId: number, playerIds: Array<number>, teamCreationTime: Date, playerLeftTeam: Function, lobbyFinishedCallback: Function) {
+    constructor(players: Array<Player>, roomCode: string, playerIds: Array<number>, teamCreationTime: Date, playerLeftTeam: Function, lobbyFinishedCallback: Function) {
         this.players = players;
         this.roomCode = roomCode;
         // this.currentTurn = 0;
         // this.document = "";
         // this.turnsPlayed = 0;
         this.playerIds = playerIds;
-        this.teamId = teamId;
         this.numReadys = 0;
         this.teamCreationTime = teamCreationTime;
         this.playerLeftTeam = playerLeftTeam;
@@ -56,6 +54,9 @@ class Lobby {
 
 
     addPlayer(player: Player) {
+        if (!this.playerIds.includes(player.id)) {
+            this.playerIds.push(player.id);
+        }
         this.players.push(player);
 
         this.broadcastLobbyInfo();
@@ -93,7 +94,7 @@ class Lobby {
             this.players = this.players.splice(deleteInd, deleteInd);
             // this.teamSize -= 1;
             // update the team in the orchestrator
-            this.teamId = await this.playerLeftTeam();
+            await this.playerLeftTeam();
             // broadcast out new lobby info
             this.broadcastLobbyInfo();
             // tell everyone that the team has changed
@@ -117,7 +118,7 @@ class Lobby {
             this.players[i].socket.removeAllListeners();
         }
 
-        this.lobbyFinishedCallback(this.roomCode, this.teamId, this.players);
+        this.lobbyFinishedCallback(this.roomCode, this.players);
     }
     // private startGame() {
     //     console.log("Starting game for " + this.roomCode);

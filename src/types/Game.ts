@@ -4,7 +4,6 @@ class Game {
     private players: Array<Player>;
     // private teamSize: number;
     private roomCode: string;
-    private teamId: number;
     private currentTurn: number;
     private document: string;
     private turnsPlayed: number;
@@ -13,13 +12,12 @@ class Game {
     private gameFinishedCallback: Function;
 
 
-    constructor(players: Array<Player>, roomCode: string, teamId: number, gameFinishedCallback: Function) {
+    constructor(players: Array<Player>, roomCode: string, gameFinishedCallback: Function) {
         this.players = players;
         this.roomCode = roomCode;
         this.currentTurn = 0;
         this.document = "";
         this.turnsPlayed = 0;
-        this.teamId = teamId;
         this.numReadys = 0;
         this.gameFinishedCallback = gameFinishedCallback;
         this.startGame();
@@ -76,7 +74,7 @@ class Game {
             this.players[i].socket.removeAllListeners();
             this.players[i].socket.disconnect();
         }
-        this.gameFinishedCallback(this.roomCode, this.teamId, this.document);
+        this.gameFinishedCallback(this.roomCode, this.document);
     }
 
 

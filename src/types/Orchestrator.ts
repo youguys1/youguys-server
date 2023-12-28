@@ -37,16 +37,16 @@ class Orchestrator {
                 playerIds.push(userId);
             }
         }
-        return { roomCode: row.team_code, teamId: row.id, playerIds: playerIds, creationTime: row.creation_time };
+        return { roomCode: row.team_code, playerIds: playerIds, creationTime: row.creation_time };
     }
 
-    private async gameOver(roomCode: string, teamId: number, document: string) {
+    private async gameOver(roomCode: string, document: string) {
         this.roomCodeToGame.delete(roomCode);
-        await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES($1, $2, $3)", [teamId, document, new Date()])
+        await this.pool.query("INSERT INTO submissions((SELECT id from teams WHERE team_code=$1 AND is_active=TRUE), document, creation_time) VALUES($1, $2, $3)", [roomCode, document, new Date()])
     }
 
     // returns db id of new team row. TODO turn this into a transaction
-    private async leaveTeam(playerId: number, teamId: number, teamCode: string, playerIds: Array<number>, creation_time: Date) {
+    private async leaveTeam(playerId: number, teamCode: string, playerIds: Array<number>, creation_time: Date) {
         await this.pool.query("UPDATE teams SET is_active=FALSE WHERE team_code=$1 AND is_active=TRUE", [teamCode]); //set the old team to be inactive
         let queryParams: any = [];
         for (let i = 0; i < playerIds.length; i++) {
@@ -62,9 +62,9 @@ class Orchestrator {
         return result.rows[0].id;
     }
 
-    private lobbyFinished(roomCode: string, teamId: number, players: Array<Player>) {
+    private lobbyFinished(roomCode: string, players: Array<Player>) {
         this.roomCodeToLobby.delete(roomCode);
-        this.roomCodeToGame.set(roomCode, new Game(players, roomCode, teamId, this.gameOver));
+        this.roomCodeToGame.set(roomCode, new Game(players, roomCode, this.gameOver));
         // await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES($1, $2, $3)", [teamId, document, new Date()])
     }
 
@@ -88,7 +88,7 @@ class Orchestrator {
             }
 
 
-            const { roomCode, playerIds, teamId, creationTime } = await this.getTeamInfo(id);
+            const { roomCode, playerIds, creationTime } = await this.getTeamInfo(id);
             // if (numPlayers < 2 || numPlayers > 5) {
             //     socket.emit("invalid_num_of_players");
             //     socket.disconnect();
@@ -101,12 +101,13 @@ class Orchestrator {
             }
             else if (this.roomCodeToLobby.has(roomCode)) {
                 lobby = this.roomCodeToLobby.get(roomCode);
+                if(lobby.)
 
                 // console.log("Creating new game for team code:" + roomCode);
                 // game = new Game([], roomCode, teamId, numPlayers, this.gameOver);
             }
             else {
-                lobby = new Lobby([], roomCode, teamId, playerIds, creationTime, this.leaveTeam, this.lobbyFinished);
+                lobby = new Lobby([], roomCode, playerIds, creationTime, this.leaveTeam, this.lobbyFinished);
                 this.roomCodeToLobby.set(roomCode, lobby);
 
             }
