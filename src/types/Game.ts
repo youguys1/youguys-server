@@ -1,21 +1,19 @@
-import { Pool } from "pg";
 import Player from "./Player";
 
 class Game {
-    public players: Array<Player>;
-    public teamSize: number;
-    public roomCode: string;
-    public teamId: number;
+    private players: Array<Player>;
+    private teamSize: number;
+    private roomCode: string;
+    private teamId: number;
     private currentTurn: number;
-    public document: string;
-    public turnsPlayed: number;
-    public NUM_TURNS = 100;
-    public currentGames: Map<string, Game>;
-    private pool: Pool;
+    private document: string;
+    private turnsPlayed: number;
+    private NUM_TURNS = 100;
     private numReadys: number;
+    private gameFinishedCallback: Function;
 
 
-    constructor(players: Array<Player>, roomCode: string, teamId: number, teamSize: number, currentGames: Map<string, Game>, pool: Pool) {
+    constructor(players: Array<Player>, roomCode: string, teamId: number, teamSize: number, gameFinishedCallback: Function) {
         this.players = players;
         this.roomCode = roomCode;
         this.currentTurn = 0;
@@ -23,15 +21,17 @@ class Game {
         this.turnsPlayed = 0;
         this.teamSize = teamSize;
         this.teamId = teamId;
-        this.currentGames = currentGames;
-        this.pool = pool;
         this.numReadys = 0;
+        this.gameFinishedCallback = gameFinishedCallback;
     }
+
+
 
     addPlayer(player: Player) {
         this.players.push(player);
         player.socket.join(this.roomCode);
         player.socket.on("player_ready", () => {
+            console.log("Player " + player.email + " is ready.")
             player.ready = true;
             this.numReadys += 1;
             player.socket.to(this.roomCode).emit("player_ready", {
@@ -43,6 +43,7 @@ class Game {
         player.socket.on("player_not_ready", () => {
             player.ready = false;
             this.numReadys -= 1
+            console.log("Player " + player.email + " is not ready.")
             player.socket.to(this.roomCode).emit("player_not_ready", {
                 player: player.email,
                 numReadys: this.numReadys,
@@ -50,7 +51,7 @@ class Game {
         });
     }
 
-    newPlayerReady() {
+    private newPlayerReady() {
         if (this.players.length != this.teamSize) {
             return;
         }
@@ -64,14 +65,15 @@ class Game {
 
         }
     }
-    startGame() {
+    private startGame() {
+        console.log("Starting game for " + this.roomCode);
         for (let i = 0; i < this.players.length; i++) {
             this.players[i].socket.removeAllListeners("player_ready");
             this.players[i].socket.removeAllListeners("player_not_ready");
             this.players[i].socket.emit("game_start", {
                 currentTurn: this.players[this.currentTurn].email
             });
-            this.players[i].socket.on("play_turn", (sentence) => { // the million dollar question: will it lock in the value of i or no?
+            this.players[i].socket.on("play_turn", (sentence) => {
                 if (this.currentTurn != i) {
                     this.players[i].socket.emit("not_your_turn");
                 }
@@ -94,15 +96,17 @@ class Game {
         }
     }
 
-    gameOver() {
-
+    private gameOver() {
+        console.log("Ending game for " + this.roomCode);
         for (let i = 0; i < this.players.length; i++) {
             this.players[i].socket.emit("game_over", this.document);
             this.players[i].socket.removeAllListeners();
+            this.players[i].socket.disconnect();
         }
-        this.currentGames.delete(this.roomCode);
-        this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES($1, $2, $3)", [this.teamId, this.document, new Date()])
+        this.gameFinishedCallback(this.roomCode, this.teamId, this.document);
     }
+
+
 
 
 }
