@@ -2,7 +2,7 @@ import Player from "./Player";
 
 class Game {
     private players: Array<Player>;
-    private teamSize: number;
+    // private teamSize: number;
     private roomCode: string;
     private teamId: number;
     private currentTurn: number;
@@ -13,63 +13,36 @@ class Game {
     private gameFinishedCallback: Function;
 
 
-    constructor(players: Array<Player>, roomCode: string, teamId: number, teamSize: number, gameFinishedCallback: Function) {
+    constructor(players: Array<Player>, roomCode: string, teamId: number, gameFinishedCallback: Function) {
         this.players = players;
         this.roomCode = roomCode;
         this.currentTurn = 0;
         this.document = "";
         this.turnsPlayed = 0;
-        this.teamSize = teamSize;
         this.teamId = teamId;
         this.numReadys = 0;
         this.gameFinishedCallback = gameFinishedCallback;
+        this.startGame();
     }
 
 
+    // private newPlayerReady() {
+    //     if (this.players.length != this.teamSize) {
+    //         return;
+    //     }
+    //     for (let player of this.players) {
+    //         if (player.ready == false) {
+    //             return;
+    //         }
+    //     }
+    //     if (this.numReadys == this.teamSize) {
+    //         this.startGame();
 
-    addPlayer(player: Player) {
-        this.players.push(player);
-        player.socket.join(this.roomCode);
-        player.socket.on("player_ready", () => {
-            console.log("Player " + player.email + " is ready.")
-            player.ready = true;
-            this.numReadys += 1;
-            player.socket.to(this.roomCode).emit("player_ready", {
-                player: player.email,
-                numReadys: this.numReadys,
-            });
-            this.newPlayerReady();
-        });
-        player.socket.on("player_not_ready", () => {
-            player.ready = false;
-            this.numReadys -= 1
-            console.log("Player " + player.email + " is not ready.")
-            player.socket.to(this.roomCode).emit("player_not_ready", {
-                player: player.email,
-                numReadys: this.numReadys,
-            });
-        });
-    }
-
-    private newPlayerReady() {
-        if (this.players.length != this.teamSize) {
-            return;
-        }
-        for (let player of this.players) {
-            if (player.ready == false) {
-                return;
-            }
-        }
-        if (this.numReadys == this.teamSize) {
-            this.startGame();
-
-        }
-    }
+    //     }
+    // }
     private startGame() {
         console.log("Starting game for " + this.roomCode);
         for (let i = 0; i < this.players.length; i++) {
-            this.players[i].socket.removeAllListeners("player_ready");
-            this.players[i].socket.removeAllListeners("player_not_ready");
             this.players[i].socket.emit("game_start", {
                 currentTurn: this.players[this.currentTurn].email
             });

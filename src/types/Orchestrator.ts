@@ -2,12 +2,14 @@ import { Socket } from "socket.io";
 import Game from "./Game";
 import { Pool } from "pg";
 import Player from "./Player";
+import Lobby from "./Lobby";
 
 class Orchestrator {
 
     private connections: Map<string, Player>;
     private ids: Set<number>;
     private roomCodeToGame: Map<string, Game>;
+    private roomCodeToLobby: Map<string, Lobby>;
     private pool: Pool;
 
     constructor(pool: Pool) {
@@ -43,6 +45,12 @@ class Orchestrator {
         await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES($1, $2, $3)", [teamId, document, new Date()])
     }
 
+    private lobbyFinished(roomCode: string, teamId: number, players: Array<Player>) {
+        this.roomCodeToLobby.delete(roomCode);
+        this.roomCodeToGame.set(roomCode, new Game(players, roomCode, teamId, this.gameOver));
+        // await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES($1, $2, $3)", [teamId, document, new Date()])
+    }
+
     public newConnection(socket: Socket) {
         console.log("someone connected");
 
@@ -68,14 +76,22 @@ class Orchestrator {
                 socket.emit("invalid_num_of_players");
                 socket.disconnect();
             }
-            let game;
+            let lobby;
             if (this.roomCodeToGame.has(roomCode)) {
-                game = this.roomCodeToGame.get(roomCode);
+                socket.emit("game_already_started");
+                socket.disconnect();
+                // game = this.roomCodeToGame.get(roomCode);
+            }
+            else if (this.roomCodeToLobby.has(roomCode)) {
+                lobby = this.roomCodeToLobby.get(roomCode);
+
+                // console.log("Creating new game for team code:" + roomCode);
+                // game = new Game([], roomCode, teamId, numPlayers, this.gameOver);
             }
             else {
-                console.log("Creating new game for team code:" + roomCode);
-                game = new Game([], roomCode, teamId, numPlayers, this.gameOver);
-                this.roomCodeToGame.set(roomCode, game);
+                lobby = new Lobby([], roomCode, teamId, numPlayers, this.lobbyFinished);
+                this.roomCodeToLobby.set(roomCode, lobby);
+
             }
             this.ids.add(id);
 
@@ -83,7 +99,7 @@ class Orchestrator {
             const newPlayer = new Player(id, socket, email);
             this.connections.set(socket.id, newPlayer);
             //@ts-ignore
-            game.addPlayer(newPlayer);
+            lobby.addPlayer(newPlayer);
         })
         socket.on('disconnect', () => {
 
