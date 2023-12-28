@@ -12,55 +12,53 @@ interface LobbyInfo {
 
 class Lobby {
     private players: Array<Player>;
-    private teamSize: number;
+    private playerIds: Array<number>;
     private roomCode: string;
     private teamId: number;
-    private lobbyInfo: LobbyInfo;
+    private teamCreationTime: Date;
     // private currentTurn: number;
     // private document: string;
     // private turnsPlayed: number;
     // private NUM_TURNS = 100;
     private numReadys: number;
+    private playerLeftTeam: Function;
     private lobbyFinishedCallback: Function;
 
 
-    constructor(players: Array<Player>, roomCode: string, teamId: number, teamSize: number, lobbyFinishedCallback: Function) {
+    constructor(players: Array<Player>, roomCode: string, teamId: number, playerIds: Array<number>, teamCreationTime: Date, playerLeftTeam: Function, lobbyFinishedCallback: Function) {
         this.players = players;
         this.roomCode = roomCode;
-        this.lobbyInfo = {
-            players: []
-        };
         // this.currentTurn = 0;
         // this.document = "";
         // this.turnsPlayed = 0;
-        this.teamSize = teamSize;
+        this.playerIds = playerIds;
         this.teamId = teamId;
         this.numReadys = 0;
+        this.teamCreationTime = teamCreationTime;
+        this.playerLeftTeam = playerLeftTeam;
         this.lobbyFinishedCallback = lobbyFinishedCallback;
     }
 
-    private updateAndBroadcastLobbyInfo(playerEmail: string, readyStatus: boolean) {
-        for (let i = 0; i < this.lobbyInfo.players.length; i++) {
-            if (this.lobbyInfo.players[i].email == playerEmail) {
-                this.lobbyInfo.players[i].ready = readyStatus;
-                return;
-            }
-        }
-
+    private broadcastToPlayers(messageType: string, data: any = null) {
         for (let i = 0; i < this.players.length; i++) {
-            this.players[i].socket.emit("lobby_info", this.lobbyInfo);
+            this.players[i].socket.emit(messageType, data);
         }
+    }
+
+    private broadcastLobbyInfo() {
+        let lobbyInfo: LobbyInfo = { players: [] };
+        for (let i = 0; i < this.players.length; i++) {
+            lobbyInfo.players.push({ email: this.players[i].email, ready: this.players[i].ready })
+        }
+        this.broadcastToPlayers("lobby_info", lobbyInfo);
     }
 
 
 
     addPlayer(player: Player) {
         this.players.push(player);
-        this.lobbyInfo.players.push({
-            email: player.email,
-            ready: player.ready
-        });
-        this.updateAndBroadcastLobbyInfo(player.email, false);
+
+        this.broadcastLobbyInfo();
         // player.socket.join(this.roomCode);
         player.socket.on("player_ready", () => {
             console.log("Player " + player.email + " is ready.")
@@ -70,7 +68,7 @@ class Lobby {
             //     player: player.email,
             //     numReadys: this.numReadys,
             // });
-            this.updateAndBroadcastLobbyInfo(player.email, true);
+            this.broadcastLobbyInfo();
             this.newPlayerReady();
         });
         player.socket.on("player_not_ready", () => {
@@ -81,12 +79,30 @@ class Lobby {
             //     player: player.email,
             //     numReadys: this.numReadys,
             // });
-            this.updateAndBroadcastLobbyInfo(player.email, false);
+            this.broadcastLobbyInfo();
         });
+
+        player.socket.on("leave_team", async () => {
+            //remove from players array
+            let deleteInd = -1;
+            for (let i = 0; i < this.players.length; i++) {
+                if (player.id = this.players[i].id) {
+                    deleteInd = i;
+                }
+            }
+            this.players = this.players.splice(deleteInd, deleteInd);
+            // this.teamSize -= 1;
+            // update the team in the orchestrator
+            this.teamId = await this.playerLeftTeam();
+            // broadcast out new lobby info
+            this.broadcastLobbyInfo();
+            // tell everyone that the team has changed
+            this.broadcastToPlayers("team_update");
+        })
     }
 
     private newPlayerReady() {
-        if (this.players.length != this.teamSize) {
+        if (this.players.length != this.playerIds.length) {
             return;
         }
         for (let player of this.players) {
@@ -94,9 +110,13 @@ class Lobby {
                 return;
             }
         }
+        if (this.players.length < 2 || this.players.length > 5) {
+            return;
+        }
         for (let i = 0; i < this.players.length; i++) {
             this.players[i].socket.removeAllListeners();
         }
+
         this.lobbyFinishedCallback(this.roomCode, this.teamId, this.players);
     }
     // private startGame() {
