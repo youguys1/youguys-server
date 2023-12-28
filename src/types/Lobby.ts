@@ -60,15 +60,10 @@ class Lobby {
         this.players.push(player);
 
         this.broadcastLobbyInfo();
-        // player.socket.join(this.roomCode);
         player.socket.on("player_ready", () => {
             console.log("Player " + player.email + " is ready.")
             player.ready = true;
             this.numReadys += 1;
-            // player.socket.to(this.roomCode).emit("player_ready", {
-            //     player: player.email,
-            //     numReadys: this.numReadys,
-            // });
             this.broadcastLobbyInfo();
             this.newPlayerReady();
         });
@@ -76,14 +71,11 @@ class Lobby {
             player.ready = false;
             this.numReadys -= 1
             console.log("Player " + player.email + " is not ready.")
-            // player.socket.to(this.roomCode).emit("player_not_ready", {
-            //     player: player.email,
-            //     numReadys: this.numReadys,
-            // });
             this.broadcastLobbyInfo();
         });
 
         player.socket.on("leave_team", async () => {
+            // TODO clean this up
             //remove from players array
             let deleteInd = -1;
             for (let i = 0; i < this.players.length; i++) {
@@ -92,9 +84,17 @@ class Lobby {
                 }
             }
             this.players = this.players.splice(deleteInd, deleteInd);
+            //remove from playerIds array
+            deleteInd = -1;
+            for (let i = 0; i < this.playerIds.length; i++) {
+                if (player.id = this.playerIds[i]) {
+                    deleteInd = i;
+                }
+            }
+            this.playerIds = this.playerIds.splice(deleteInd, deleteInd);
             // this.teamSize -= 1;
             // update the team in the orchestrator
-            await this.playerLeftTeam();
+            await this.playerLeftTeam(player.id, this.roomCode, this.playerIds, this.teamCreationTime);
             // broadcast out new lobby info
             this.broadcastLobbyInfo();
             // tell everyone that the team has changed

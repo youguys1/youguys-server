@@ -46,7 +46,7 @@ class Orchestrator {
     }
 
     // returns db id of new team row. TODO turn this into a transaction
-    private async leaveTeam(playerId: number, teamCode: string, playerIds: Array<number>, creation_time: Date) {
+    private async leaveTeam(playerId: number, teamCode: string, playerIds: Array<number>, creationTime: Date) {
         await this.pool.query("UPDATE teams SET is_active=FALSE WHERE team_code=$1 AND is_active=TRUE", [teamCode]); //set the old team to be inactive
         let queryParams: any = [];
         for (let i = 0; i < playerIds.length; i++) {
@@ -57,7 +57,7 @@ class Orchestrator {
         for (let i = 0; i < 5 - queryParams.length; i++) {
             queryParams.push(null);
         }
-        queryParams = queryParams.concat([teamCode, true, creation_time])
+        queryParams = queryParams.concat([teamCode, true, creationTime])
         const result = await this.pool.query("INSERT INTO teams(user1_id, user2_id, user3_id, user4_id, user5_id, team_code, is_active, creation_time) VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id", queryParams);
         return result.rows[0].id;
     }
@@ -101,7 +101,6 @@ class Orchestrator {
             }
             else if (this.roomCodeToLobby.has(roomCode)) {
                 lobby = this.roomCodeToLobby.get(roomCode);
-                if(lobby.)
 
                 // console.log("Creating new game for team code:" + roomCode);
                 // game = new Game([], roomCode, teamId, numPlayers, this.gameOver);
