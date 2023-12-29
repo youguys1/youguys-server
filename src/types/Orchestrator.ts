@@ -65,8 +65,6 @@ class Orchestrator {
 
         console.log(this.connections.size);
         socket.on('authenticate', async ({ token }) => {
-            console.log(this.ids)
-            // console.log(token);
             const { id, email } = await this.getInfoFromToken(token);
             console.log(email, "just connected");
             if (!id) {
@@ -88,8 +86,7 @@ class Orchestrator {
             if (this.roomCodeToGame.has(roomCode)) {
                 console.log("adding himn to game that already started");
                 this.roomCodeToGame.get(roomCode)?.addPlayer(newPlayer);
-                // socket.emit("game_already_started");
-                // socket.disconnect();
+
             }
             else if (this.roomCodeToLobby.has(roomCode)) {
                 //@ts-ignore
@@ -110,8 +107,6 @@ class Orchestrator {
 
         })
         socket.on('disconnect', () => {
-
-            console.log("THERE WAS A DISCONNECTION HERE TOO")
 
 
             if (this.connections.has(socket.id)) {

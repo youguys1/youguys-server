@@ -14,7 +14,6 @@ class Lobby {
     private players: Array<Player>; // the players active in the lobby
     private playerIds: Array<number>; //the ids of everyone on your team
     private roomCode: string;
-    private numReadys: number;
     private playerLeftTeam: Function;
     private lobbyFinishedCallback: Function;
 
@@ -23,7 +22,6 @@ class Lobby {
         this.players = players;
         this.roomCode = roomCode;
         this.playerIds = playerIds;
-        this.numReadys = 0;
         this.playerLeftTeam = playerLeftTeam;
         this.lobbyFinishedCallback = lobbyFinishedCallback;
     }
@@ -79,13 +77,11 @@ class Lobby {
         player.socket.on("player_ready", () => {
             console.log("Player " + player.email + " is ready.")
             player.ready = true;
-            this.numReadys += 1;
             this.broadcastLobbyInfo();
             this.newPlayerReady();
         });
         player.socket.on("player_not_ready", () => {
             player.ready = false;
-            this.numReadys -= 1
             console.log("Player " + player.email + " is not ready.")
             this.broadcastLobbyInfo();
         });
@@ -93,30 +89,21 @@ class Lobby {
         player.socket.on("disconnect", this.disconnectCallback);
 
         player.socket.on("leave_team", async () => {
-            console.log("someone is leaving he team");
+            console.log("someone is leaving the team");
             console.log(this.players);
             await this.playerLeftTeam(player.id);
             if (this.players.length == 1) {
-                console.log("killing lobby");
                 // kill lobby if everyone left the team
                 this.lobbyFinishedCallback(this.roomCode, this.players, false);
 
                 return;
             }
-            console.log("made it to here")
             this.broadcastToPlayers("team_update");
             this.players = this.players.filter((x) => x.id != player.id);
             this.playerIds = this.playerIds.filter((x) => x != player.id);
-            console.log(this.players);
-            console.log(this.playerIds);
+
             this.broadcastLobbyInfo();
 
-
-            // update the team in the orchestrator
-
-            // broadcast out new lobby info
-
-            // tell everyone that the team has changed
 
         })
     }
