@@ -8,8 +8,11 @@ import fs from "fs";
 
 
 try {
-    // Remove current build
-    fs.rmSync('./dist/');
+    if (fs.existsSync('./dist/')) {
+        // Remove current build
+        fs.rmSync('./dist/');
+    }
+
     // Copy front-end files
     fs.cpSync('./src/public', './dist/public');
     fs.cpSync('./src/views', './dist/views');
