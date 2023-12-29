@@ -76,6 +76,7 @@ class Lobby {
 
         player.socket.on("disconnect", () => { // if you disconnect in the lobby, we can just remove you from the players
             this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
+            this.broadcastLobbyInfo();
         });
 
         player.socket.on("leave_team", async () => {
