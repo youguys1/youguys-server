@@ -2,13 +2,13 @@ import Player from "./Player";
 
 class Game {
     private players: Array<Player>;
-    // private teamSize: number;
     private roomCode: string;
     private currentTurn: number;
     private document: string;
     private turnsPlayed: number;
     private NUM_TURNS = 100;
     private gameFinishedCallback: Function;
+    private paused: boolean;
 
 
     constructor(players: Array<Player>, roomCode: string, gameFinishedCallback: Function) {
@@ -18,7 +18,22 @@ class Game {
         this.document = "";
         this.turnsPlayed = 0;
         this.gameFinishedCallback = gameFinishedCallback;
+        this.paused = false;
         this.startGame();
+    }
+
+    addPlayer(player: Player) {
+        this.players.push(player);
+        if (this.paused && this.players.length >= 2) {
+            this.broadcastToPlayers("game_unpause");
+            this.paused = false;
+        }
+    }
+
+    private broadcastToPlayers(messageType: string, data: any = null) {
+        for (let i = 0; i < this.players.length; i++) {
+            this.players[i].socket.emit(messageType, data);
+        }
     }
 
     private startGame() {
@@ -28,7 +43,10 @@ class Game {
                 currentTurn: this.players[this.currentTurn].email
             });
             this.players[i].socket.on("play_turn", (sentence) => {
-                if (this.currentTurn != i) {
+                if (this.paused) {
+                    this.players[i].socket.emit("game_pause")
+                }
+                else if (this.currentTurn != i) {
                     this.players[i].socket.emit("not_your_turn");
                 }
                 else {
@@ -47,6 +65,16 @@ class Game {
                     }
                 }
             })
+            this.players[i].socket.on("disconnect", () => { //
+                this.players = this.players.filter((player: Player) => player.id != this.players[i].id);
+                if (this.currentTurn == i) {
+                    this.currentTurn += 1;
+                }
+                if (this.players.length == 1) {
+                    this.paused = true;
+                    this.broadcastToPlayers("game_pause");
+                }
+            })
         }
     }
 
@@ -59,9 +87,6 @@ class Game {
         }
         this.gameFinishedCallback(this.roomCode, this.document);
     }
-
-
-
 
 }
 

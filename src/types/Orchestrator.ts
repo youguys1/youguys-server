@@ -46,7 +46,6 @@ class Orchestrator {
         await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES((SELECT id from teams WHERE team_code=$1), $2, $3)", [roomCode, document, new Date()])
     }
 
-    // returns db id of new team row. TODO turn this into a transaction
     private async leaveTeam(playerId: number) {
         await this.pool.query("UPDATE team_players SET leave_time=$1 WHERE user_id=$2 and leave_time IS NULL", [new Date(), playerId])
     }
@@ -76,26 +75,30 @@ class Orchestrator {
             }
 
             const { roomCode, playerIds } = await this.getTeamInfo(id);
-            let lobby;
+  
+            const newPlayer = new Player(id, socket, email);
             if (this.roomCodeToGame.has(roomCode)) {
-                socket.emit("game_already_started");
-                socket.disconnect();
+                this.roomCodeToGame.get(roomCode)?.addPlayer(newPlayer);
+                // socket.emit("game_already_started");
+                // socket.disconnect();
             }
             else if (this.roomCodeToLobby.has(roomCode)) {
-                lobby = this.roomCodeToLobby.get(roomCode);
+                //@ts-ignore
+                this.roomCodeToLobby.get(roomCode).addPlayer(newPlayer);
             }
             else {
-                lobby = new Lobby([], roomCode, playerIds, this.leaveTeam, this.lobbyFinished);
+                let lobby = new Lobby([], roomCode, playerIds, this.leaveTeam, this.lobbyFinished);
                 this.roomCodeToLobby.set(roomCode, lobby);
+                lobby.addPlayer(newPlayer);
 
             }
             this.ids.add(id);
 
             socket.emit("authenticated");
-            const newPlayer = new Player(id, socket, email);
+            
             this.connections.set(socket.id, newPlayer);
             //@ts-ignore
-            lobby.addPlayer(newPlayer);
+            
         })
         socket.on('disconnect', () => {
 
