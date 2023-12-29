@@ -66,8 +66,6 @@ class Orchestrator {
     }
 
     private lobbyFinished(roomCode: string, players: Array<Player>) {
-        console.log(this.roomCodeToGame);
-        console.log(this.roomCodeToLobby)
         this.roomCodeToLobby.delete(roomCode);
         this.roomCodeToGame.set(roomCode, new Game(players, roomCode, this.gameOver));
         // await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES($1, $2, $3)", [teamId, document, new Date()])
