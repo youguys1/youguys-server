@@ -33,8 +33,10 @@ class Orchestrator {
     }
 
     private async getTeamInfo(id: number) {
+        console.log(id)
         const result = await this.pool.query('SELECT teams.team_code, team_players.user_id FROM public.teams JOIN team_players ON team_players.team_id = teams.id WHERE team_players.leave_time IS NULL AND team_players.team_id=(select team_id from team_players WHERE user_id=$1 and leave_time IS NULL)', [id]);
         let playerIds = [];
+        console.log(result.rows)
         for (let row of result.rows) {
             playerIds.push(row.user_id);
         }
@@ -43,17 +45,19 @@ class Orchestrator {
 
     private async gameOver(roomCode: string, document: string) {
         this.roomCodeToGame.delete(roomCode);
-        await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES((SELECT id from teams WHERE team_code=$1), $2, $3)", [roomCode, document, new Date()])
+        await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES((SELECT id from teams WHERE team_code=$1), $2, $3)", [roomCode, document, new Date()]);
     }
 
-    // returns db id of new team row. TODO turn this into a transaction
     private async leaveTeam(playerId: number) {
         await this.pool.query("UPDATE team_players SET leave_time=$1 WHERE user_id=$2 and leave_time IS NULL", [new Date(), playerId])
     }
 
-    private lobbyFinished(roomCode: string, players: Array<Player>) {
+    private lobbyFinished(roomCode: string, players: Array<Player>, startGame: boolean) {
         this.roomCodeToLobby.delete(roomCode);
-        this.roomCodeToGame.set(roomCode, new Game(players, roomCode, this.gameOver));
+        if (startGame) {
+            this.roomCodeToGame.set(roomCode, new Game(players, roomCode, this.gameOver));
+        }
+
     }
 
     public newConnection(socket: Socket) {
@@ -61,43 +65,49 @@ class Orchestrator {
 
         console.log(this.connections.size);
         socket.on('authenticate', async ({ token }) => {
-
-            console.log(token);
             const { id, email } = await this.getInfoFromToken(token);
+            console.log(email, "just connected");
             if (!id) {
                 socket.emit("not_authenticated");
                 socket.disconnect();
                 return;
             }
             if (this.ids.has(id)) {
+
+                console.log("already playing")
                 socket.emit("already_playing");
                 socket.disconnect();
                 return;
             }
 
             const { roomCode, playerIds } = await this.getTeamInfo(id);
-            let lobby;
+
+            const newPlayer = new Player(id, socket, email);
             if (this.roomCodeToGame.has(roomCode)) {
-                socket.emit("game_already_started");
-                socket.disconnect();
+                console.log("adding himn to game that already started");
+                this.roomCodeToGame.get(roomCode)?.addPlayer(newPlayer);
+
             }
             else if (this.roomCodeToLobby.has(roomCode)) {
-                lobby = this.roomCodeToLobby.get(roomCode);
+                //@ts-ignore
+                this.roomCodeToLobby.get(roomCode).addPlayer(newPlayer);
             }
             else {
-                lobby = new Lobby([], roomCode, playerIds, this.leaveTeam, this.lobbyFinished);
+                let lobby = new Lobby([], roomCode, playerIds, this.leaveTeam, this.lobbyFinished);
                 this.roomCodeToLobby.set(roomCode, lobby);
+                lobby.addPlayer(newPlayer);
 
             }
             this.ids.add(id);
 
             socket.emit("authenticated");
-            const newPlayer = new Player(id, socket, email);
+
             this.connections.set(socket.id, newPlayer);
             //@ts-ignore
-            lobby.addPlayer(newPlayer);
+
         })
         socket.on('disconnect', () => {
+
 
             if (this.connections.has(socket.id)) {
                 //@ts-ignore

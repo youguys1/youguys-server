@@ -1,18 +1,21 @@
+
+import fs from "fs";
 /**
  * Remove old files, copy front-end ones.
  */
 
 // @ts-ignore
-import fs from 'fs-extra';
-import Logger from 'jet-logger';
 
 
 try {
-    // Remove current build
-    fs.removeSync('./dist/');
+    if (fs.existsSync('./dist/')) {
+        // Remove current build
+        fs.rmdirSync('./dist/', { recursive: true });
+    }
+
     // Copy front-end files
-    fs.copySync('./src/public', './dist/public');
-    fs.copySync('./src/views', './dist/views');
+    fs.cpSync('./src/public', './dist/public');
+    fs.cpSync('./src/views', './dist/views');
 } catch (err) {
-    Logger.Err(err);
+    console.log(err);
 }
