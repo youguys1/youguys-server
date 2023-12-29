@@ -14,7 +14,6 @@ class Lobby {
     private players: Array<Player>; // the players active in the lobby
     private playerIds: Array<number>; //the ids of everyone on your team
     private roomCode: string;
-    private numReadys: number;
     private playerLeftTeam: Function;
     private lobbyFinishedCallback: Function;
 
@@ -23,14 +22,21 @@ class Lobby {
         this.players = players;
         this.roomCode = roomCode;
         this.playerIds = playerIds;
-        this.numReadys = 0;
         this.playerLeftTeam = playerLeftTeam;
         this.lobbyFinishedCallback = lobbyFinishedCallback;
     }
 
     private broadcastToPlayers(messageType: string, data: any = null) {
+        console.log("SENDING MESSAGE TYPE: " + messageType);
+        console.log("WITH DATA: ", data);
         for (let i = 0; i < this.players.length; i++) {
-            this.players[i].socket.emit(messageType, data);
+            if (data) {
+                this.players[i].socket.emit(messageType, data);
+
+            }
+            else {
+                this.players[i].socket.emit(messageType);
+            }
         }
     }
 
@@ -44,9 +50,12 @@ class Lobby {
 
 
 
+
+
     addPlayer(player: Player) {
         if (!this.playerIds.includes(player.id)) {
             this.playerIds.push(player.id);
+            this.broadcastToPlayers("team_update");
         }
         this.players.push(player);
 
@@ -54,41 +63,46 @@ class Lobby {
         player.socket.on("player_ready", () => {
             console.log("Player " + player.email + " is ready.")
             player.ready = true;
-            this.numReadys += 1;
             this.broadcastLobbyInfo();
             this.newPlayerReady();
         });
         player.socket.on("player_not_ready", () => {
             player.ready = false;
-            this.numReadys -= 1
             console.log("Player " + player.email + " is not ready.")
             this.broadcastLobbyInfo();
         });
 
-        player.socket.on("leave_team", async () => {
-            // TODO clean this up
-            //remove from players array
-            let deleteInd = -1;
-            for (let i = 0; i < this.players.length; i++) {
-                if (player.id = this.players[i].id) {
-                    deleteInd = i;
-                }
+        player.socket.on("disconnect", () => {
+            if (this.players.length == 1) {
+                console.log("killing lobby");
+                // kill lobby if everyone left the team
+                this.lobbyFinishedCallback(this.roomCode, this.players, false);
+
+                return;
             }
-            this.players = this.players.splice(deleteInd, deleteInd);
-            //remove from playerIds array
-            deleteInd = -1;
-            for (let i = 0; i < this.playerIds.length; i++) {
-                if (player.id = this.playerIds[i]) {
-                    deleteInd = i;
-                }
-            }
-            this.playerIds = this.playerIds.splice(deleteInd, deleteInd);
-            // update the team in the orchestrator
-            await this.playerLeftTeam(player.id);
-            // broadcast out new lobby info
+            this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
+
+
             this.broadcastLobbyInfo();
-            // tell everyone that the team has changed
+        });
+
+        player.socket.on("leave_team", async () => {
+            console.log("someone is leaving the team");
+            console.log(this.players);
+            await this.playerLeftTeam(player.id);
+            if (this.players.length == 1) {
+                // kill lobby if everyone left the team
+                this.lobbyFinishedCallback(this.roomCode, this.players, false);
+
+                return;
+            }
             this.broadcastToPlayers("team_update");
+            this.players = this.players.filter((x) => x.id != player.id);
+            this.playerIds = this.playerIds.filter((x) => x != player.id);
+
+            this.broadcastLobbyInfo();
+
+
         })
     }
 
@@ -105,10 +119,13 @@ class Lobby {
             return;
         }
         for (let i = 0; i < this.players.length; i++) {
-            this.players[i].socket.removeAllListeners();
+            this.players[i].socket.removeAllListeners("player_ready");
+            this.players[i].socket.removeAllListeners("player_not_ready");
+            this.players[i].socket.removeAllListeners("leave_team");
+            // this.players[i].socket.removeListener("disconnect", this.disconnectCallback);
         }
 
-        this.lobbyFinishedCallback(this.roomCode, this.players);
+        this.lobbyFinishedCallback(this.roomCode, this.players, true);
     }
 
 

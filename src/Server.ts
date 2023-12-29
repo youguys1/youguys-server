@@ -7,7 +7,6 @@ import StatusCodes from 'http-status-codes';
 import 'express-async-errors';
 import cors from 'cors';
 
-// import logger from '@shared/Logger';
 
 const app = express();
 const { BAD_REQUEST } = StatusCodes;
