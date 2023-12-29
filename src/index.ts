@@ -24,6 +24,7 @@ const orchestrator = new Orchestrator(pool);
 
 // TODO handle disconnections
 ioServer.on('connection', function (socket: Socket) {
+    console.log("THERE WAS A CONNECTION");
     orchestrator.newConnection(socket);
 });
 

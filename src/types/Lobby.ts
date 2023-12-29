@@ -75,20 +75,24 @@ class Lobby {
         });
 
         player.socket.on("disconnect", () => { // if you disconnect in the lobby, we can just remove you from the players
+            console.log("THERE WAS A DISCCONNECTION");
             this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
             this.broadcastLobbyInfo();
         });
 
         player.socket.on("leave_team", async () => {
             console.log("someone is leaving he team")
+            await this.playerLeftTeam(player.id);
+            this.broadcastToPlayers("team_update");
             this.players = this.players.filter((x) => x.id != player.id);
             this.playerIds = this.playerIds.filter((x) => x != player.id);
             console.log(this.players);
             console.log(this.playerIds);
             this.broadcastLobbyInfo();
-            this.broadcastToPlayers("team_update");
+
+
             // update the team in the orchestrator
-            await this.playerLeftTeam(player.id);
+
             // broadcast out new lobby info
 
             // tell everyone that the team has changed

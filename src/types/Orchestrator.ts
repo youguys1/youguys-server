@@ -36,6 +36,7 @@ class Orchestrator {
         console.log(id)
         const result = await this.pool.query('SELECT teams.team_code, team_players.user_id FROM public.teams JOIN team_players ON team_players.team_id = teams.id WHERE team_players.leave_time IS NULL AND team_players.team_id=(select team_id from team_players WHERE user_id=$1 and leave_time IS NULL)', [id]);
         let playerIds = [];
+        console.log(result.rows)
         for (let row of result.rows) {
             playerIds.push(row.user_id);
         }
@@ -104,6 +105,7 @@ class Orchestrator {
 
         })
         socket.on('disconnect', () => {
+            
 
             if (this.connections.has(socket.id)) {
                 //@ts-ignore
