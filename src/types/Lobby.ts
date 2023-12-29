@@ -75,14 +75,31 @@ class Lobby {
         });
 
         player.socket.on("disconnect", () => { // if you disconnect in the lobby, we can just remove you from the players
-            console.log("THERE WAS A DISCCONNECTION");
+            if (this.players.length == 1) {
+                console.log("killing lobby");
+                // kill lobby if everyone left the team
+                this.lobbyFinishedCallback(this.roomCode, this.players, false);
+
+                return;
+            }
             this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
+            
+
             this.broadcastLobbyInfo();
         });
 
         player.socket.on("leave_team", async () => {
-            console.log("someone is leaving he team")
+            console.log("someone is leaving he team");
+            console.log(this.players);
             await this.playerLeftTeam(player.id);
+            if (this.players.length == 1) {
+                console.log("killing lobby");
+                // kill lobby if everyone left the team
+                this.lobbyFinishedCallback(this.roomCode, this.players, false);
+
+                return;
+            }
+            console.log("made it to here")
             this.broadcastToPlayers("team_update");
             this.players = this.players.filter((x) => x.id != player.id);
             this.playerIds = this.playerIds.filter((x) => x != player.id);
@@ -113,10 +130,10 @@ class Lobby {
             return;
         }
         for (let i = 0; i < this.players.length; i++) {
-            this.players[i].socket.removeAllListeners();
+            // this.players[i].socket.removeAllListeners();
         }
 
-        this.lobbyFinishedCallback(this.roomCode, this.players);
+        this.lobbyFinishedCallback(this.roomCode, this.players, true);
     }
 
 

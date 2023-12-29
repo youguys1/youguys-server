@@ -25,6 +25,10 @@ class Game {
     addPlayer(player: Player) {
         this.players.push(player);
         this.registerListeners();
+        player.socket.emit("game_start", {
+            currentTurn: this.players[this.currentTurn].email,
+            currentDocument: this.document,
+        })
         if (this.paused && this.players.length >= 2) {
             this.broadcastToPlayers("game_unpause");
             this.paused = false;
@@ -40,14 +44,19 @@ class Game {
     private startGame() {
         console.log("Starting game for " + this.roomCode);
         this.broadcastToPlayers("game_start", {
-            currentTurn: this.players[this.currentTurn].email
+            currentTurn: this.players[this.currentTurn].email,
+            currentDocument: "",
         });
         this.registerListeners();
     }
 
     private registerListeners() {
         for (let i = 0; i < this.players.length; i++) {
-            this.players[i].socket.removeAllListeners();
+            this.players[i].socket.removeAllListeners("player_ready");
+            this.players[i].socket.removeAllListeners("player_not_ready");
+            this.players[i].socket.removeAllListeners("leave_team");
+
+
 
             this.players[i].socket.on("play_turn", (sentence) => {
                 console.log("play turn event");
@@ -79,19 +88,31 @@ class Game {
             this.players[i].socket.on("disconnect", () => { //
                 console.log("player disconnected in the game setate")
                 this.players = this.players.filter((player: Player) => player.id != this.players[i].id);
-                this.registerListeners();
+
                 if (this.currentTurn == i) {
                     console.log("it was his turn")
-                    this.currentTurn += 1 % this.players.length;
+                    this.currentTurn = (this.currentTurn + 1) % this.players.length;
                 }
-                this.broadcastToPlayers("turn_played", {
-                    currentTurn: this.players[this.currentTurn].email,
-                    sentence: ""
-                });
+                if (this.players.length == 0) {
+                    this.gameFinishedCallback(this.roomCode, this.document);
+                    return;
+                }
+
+                this.registerListeners();
+
                 if (this.players.length == 1) {
+                    console.log("pausing game")
                     this.paused = true;
                     this.broadcastToPlayers("game_pause");
                 }
+                else {
+                    console.log(this.currentTurn);
+                    this.broadcastToPlayers("turn_played", {
+                        currentTurn: this.players[this.currentTurn].email,
+                        sentence: ""
+                    });
+                }
+
             })
         }
     }

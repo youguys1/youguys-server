@@ -52,9 +52,12 @@ class Orchestrator {
         await this.pool.query("UPDATE team_players SET leave_time=$1 WHERE user_id=$2 and leave_time IS NULL", [new Date(), playerId])
     }
 
-    private lobbyFinished(roomCode: string, players: Array<Player>) {
+    private lobbyFinished(roomCode: string, players: Array<Player>, startGame: boolean) {
         this.roomCodeToLobby.delete(roomCode);
-        this.roomCodeToGame.set(roomCode, new Game(players, roomCode, this.gameOver));
+        if (startGame) {
+            this.roomCodeToGame.set(roomCode, new Game(players, roomCode, this.gameOver));
+        }
+
     }
 
     public newConnection(socket: Socket) {
@@ -62,15 +65,17 @@ class Orchestrator {
 
         console.log(this.connections.size);
         socket.on('authenticate', async ({ token }) => {
-
-            console.log(token);
+            console.log(this.ids)
+            // console.log(token);
             const { id, email } = await this.getInfoFromToken(token);
+            console.log(email, "just connected");
             if (!id) {
                 socket.emit("not_authenticated");
                 socket.disconnect();
                 return;
             }
             if (this.ids.has(id)) {
+
                 console.log("already playing")
                 socket.emit("already_playing");
                 socket.disconnect();
@@ -105,7 +110,9 @@ class Orchestrator {
 
         })
         socket.on('disconnect', () => {
-            
+
+            console.log("THERE WAS A DISCONNECTION HERE TOO")
+
 
             if (this.connections.has(socket.id)) {
                 //@ts-ignore
