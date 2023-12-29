@@ -1,3 +1,5 @@
+
+import fs from "fs";
 /**
  * Remove old files, copy front-end ones.
  */
@@ -7,10 +9,10 @@
 
 try {
     // Remove current build
-    fs.removeSync('./dist/');
+    fs.rmSync('./dist/');
     // Copy front-end files
-    fs.copySync('./src/public', './dist/public');
-    fs.copySync('./src/views', './dist/views');
+    fs.cpSync('./src/public', './dist/public');
+    fs.cpSync('./src/views', './dist/views');
 } catch (err) {
     console.log(err);
 }
