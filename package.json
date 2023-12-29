@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "description": "server for youguys",
     "scripts": {
-        "build": "ts-node build.ts && tsc --build tsconfig.prod.json",
+        "build": "tsc --build tsconfig.prod.json",
         "lint": "eslint . --ext .ts",
         "start": "node -r module-alias/register ./dist --env=production",
         "start:dev": "nodemon",
