@@ -48,21 +48,7 @@ class Lobby {
         this.broadcastToPlayers("lobby_info", lobbyInfo);
     }
 
-    private disconnectCallback() {
-        // if you disconnect in the lobby, we can just remove you from the players
-        if (this.players.length == 1) {
-            console.log("killing lobby");
-            // kill lobby if everyone left the team
-            this.lobbyFinishedCallback(this.roomCode, this.players, false);
 
-            return;
-        }
-        this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
-
-
-        this.broadcastLobbyInfo();
-
-    }
 
 
 
@@ -86,7 +72,19 @@ class Lobby {
             this.broadcastLobbyInfo();
         });
 
-        player.socket.on("disconnect", this.disconnectCallback);
+        player.socket.on("disconnect", () => {
+            if (this.players.length == 1) {
+                console.log("killing lobby");
+                // kill lobby if everyone left the team
+                this.lobbyFinishedCallback(this.roomCode, this.players, false);
+
+                return;
+            }
+            this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
+
+
+            this.broadcastLobbyInfo();
+        });
 
         player.socket.on("leave_team", async () => {
             console.log("someone is leaving the team");
@@ -124,7 +122,7 @@ class Lobby {
             this.players[i].socket.removeAllListeners("player_ready");
             this.players[i].socket.removeAllListeners("player_not_ready");
             this.players[i].socket.removeAllListeners("leave_team");
-            this.players[i].socket.removeListener("disconnect", this.disconnectCallback);
+            // this.players[i].socket.removeListener("disconnect", this.disconnectCallback);
         }
 
         this.lobbyFinishedCallback(this.roomCode, this.players, true);
