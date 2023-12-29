@@ -10,7 +10,7 @@ import fs from "fs";
 try {
     if (fs.existsSync('./dist/')) {
         // Remove current build
-        fs.rmSync('./dist/');
+        fs.rmdirSync('./dist/');
     }
 
     // Copy front-end files
