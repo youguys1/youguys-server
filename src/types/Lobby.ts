@@ -29,6 +29,7 @@ class Lobby {
     private broadcastToPlayers(messageType: string, data: any = null) {
         console.log("SENDING MESSAGE TYPE: " + messageType);
         console.log("WITH DATA: ", data);
+        console.log("TO: ", this.players);
         for (let i = 0; i < this.players.length; i++) {
             if (data) {
                 this.players[i].socket.emit(messageType, data);
@@ -73,14 +74,15 @@ class Lobby {
         });
 
         player.socket.on("disconnect", () => {
-            if (this.players.length == 1) {
+
+            this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
+            if (this.players.length == 0) {
                 console.log("killing lobby");
                 // kill lobby if everyone left the team
                 this.lobbyFinishedCallback(this.roomCode, this.players, false);
 
                 return;
             }
-            this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
 
 
             this.broadcastLobbyInfo();
@@ -90,15 +92,18 @@ class Lobby {
             console.log("someone is leaving the team");
             console.log(this.players);
             await this.playerLeftTeam(player.id);
-            if (this.players.length == 1) {
+
+            console.log("ABOUT TO BROADCASTR THE TEAM EARLY")
+            this.broadcastToPlayers("team_update");
+            this.players = this.players.filter((x) => x.id != player.id);
+            this.playerIds = this.playerIds.filter((x) => x != player.id);
+            if (this.players.length == 0) {
+                console.log("RETURNIGN EARLYYYY")
                 // kill lobby if everyone left the team
                 this.lobbyFinishedCallback(this.roomCode, this.players, false);
 
                 return;
             }
-            this.broadcastToPlayers("team_update");
-            this.players = this.players.filter((x) => x.id != player.id);
-            this.playerIds = this.playerIds.filter((x) => x != player.id);
 
             this.broadcastLobbyInfo();
 
