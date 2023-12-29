@@ -24,6 +24,7 @@ class Game {
 
     addPlayer(player: Player) {
         this.players.push(player);
+        this.registerListeners();
         if (this.paused && this.players.length >= 2) {
             this.broadcastToPlayers("game_unpause");
             this.paused = false;
@@ -38,27 +39,37 @@ class Game {
 
     private startGame() {
         console.log("Starting game for " + this.roomCode);
+        this.broadcastToPlayers("game_start", {
+            currentTurn: this.players[this.currentTurn].email
+        });
+        this.registerListeners();
+    }
+
+    private registerListeners() {
         for (let i = 0; i < this.players.length; i++) {
-            this.players[i].socket.emit("game_start", {
-                currentTurn: this.players[this.currentTurn].email
-            });
+            this.players[i].socket.removeAllListeners();
+
             this.players[i].socket.on("play_turn", (sentence) => {
+                console.log("play turn event");
+                console.log(this.players)
                 if (this.paused) {
                     this.players[i].socket.emit("game_pause")
                 }
                 else if (this.currentTurn != i) {
+                    console.log(i)
+                    console.log(this.currentTurn)
                     this.players[i].socket.emit("not_your_turn");
                 }
                 else {
                     this.document += sentence;
                     this.currentTurn = (this.currentTurn + 1) % this.players.length;
                     this.turnsPlayed += 1;
-                    for (let j = 0; j < this.players.length; j++) {
-                        this.players[j].socket.emit("turn_played", {
-                            currentTurn: this.players[this.currentTurn].email,
-                            sentence: sentence
-                        });
-                    }
+
+                    this.broadcastToPlayers("turn_played", {
+                        currentTurn: this.players[this.currentTurn].email,
+                        sentence: sentence
+                    });
+
 
                     if (this.turnsPlayed >= this.NUM_TURNS) {
                         this.gameOver();
@@ -66,10 +77,17 @@ class Game {
                 }
             })
             this.players[i].socket.on("disconnect", () => { //
+                console.log("player disconnected in the game setate")
                 this.players = this.players.filter((player: Player) => player.id != this.players[i].id);
+                this.registerListeners();
                 if (this.currentTurn == i) {
-                    this.currentTurn += 1;
+                    console.log("it was his turn")
+                    this.currentTurn += 1 % this.players.length;
                 }
+                this.broadcastToPlayers("turn_played", {
+                    currentTurn: this.players[this.currentTurn].email,
+                    sentence: ""
+                });
                 if (this.players.length == 1) {
                     this.paused = true;
                     this.broadcastToPlayers("game_pause");

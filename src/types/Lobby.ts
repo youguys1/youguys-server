@@ -29,8 +29,16 @@ class Lobby {
     }
 
     private broadcastToPlayers(messageType: string, data: any = null) {
+        console.log("SENDING MESSAGE TYPE: " + messageType);
+        console.log("WITH DATA: ", data);
         for (let i = 0; i < this.players.length; i++) {
-            this.players[i].socket.emit(messageType, data);
+            if (data) {
+                this.players[i].socket.emit(messageType, data);
+
+            }
+            else {
+                this.players[i].socket.emit(messageType);
+            }
         }
     }
 
@@ -47,6 +55,7 @@ class Lobby {
     addPlayer(player: Player) {
         if (!this.playerIds.includes(player.id)) {
             this.playerIds.push(player.id);
+            this.broadcastToPlayers("team_update");
         }
         this.players.push(player);
 
@@ -65,34 +74,24 @@ class Lobby {
             this.broadcastLobbyInfo();
         });
 
-        player.socket.on("disconnect", ()=> { // if you disconnect in the lobby, we can just remove you from the players
+        player.socket.on("disconnect", () => { // if you disconnect in the lobby, we can just remove you from the players
             this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
         });
 
         player.socket.on("leave_team", async () => {
-            // TODO clean this up
-            //remove from players array
-            let deleteInd = -1;
-            for (let i = 0; i < this.players.length; i++) {
-                if (player.id = this.players[i].id) {
-                    deleteInd = i;
-                }
-            }
-            this.players = this.players.splice(deleteInd, deleteInd);
-            //remove from playerIds array
-            deleteInd = -1;
-            for (let i = 0; i < this.playerIds.length; i++) {
-                if (player.id = this.playerIds[i]) {
-                    deleteInd = i;
-                }
-            }
-            this.playerIds = this.playerIds.splice(deleteInd, deleteInd);
+            console.log("someone is leaving he team")
+            this.players = this.players.filter((x) => x.id != player.id);
+            this.playerIds = this.playerIds.filter((x) => x != player.id);
+            console.log(this.players);
+            console.log(this.playerIds);
+            this.broadcastLobbyInfo();
+            this.broadcastToPlayers("team_update");
             // update the team in the orchestrator
             await this.playerLeftTeam(player.id);
             // broadcast out new lobby info
-            this.broadcastLobbyInfo();
+
             // tell everyone that the team has changed
-            this.broadcastToPlayers("team_update");
+
         })
     }
 

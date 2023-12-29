@@ -33,6 +33,7 @@ class Orchestrator {
     }
 
     private async getTeamInfo(id: number) {
+        console.log(id)
         const result = await this.pool.query('SELECT teams.team_code, team_players.user_id FROM public.teams JOIN team_players ON team_players.team_id = teams.id WHERE team_players.leave_time IS NULL AND team_players.team_id=(select team_id from team_players WHERE user_id=$1 and leave_time IS NULL)', [id]);
         let playerIds = [];
         for (let row of result.rows) {
@@ -69,15 +70,17 @@ class Orchestrator {
                 return;
             }
             if (this.ids.has(id)) {
+                console.log("already playing")
                 socket.emit("already_playing");
                 socket.disconnect();
                 return;
             }
 
             const { roomCode, playerIds } = await this.getTeamInfo(id);
-  
+
             const newPlayer = new Player(id, socket, email);
             if (this.roomCodeToGame.has(roomCode)) {
+                console.log("adding himn to game that already started");
                 this.roomCodeToGame.get(roomCode)?.addPlayer(newPlayer);
                 // socket.emit("game_already_started");
                 // socket.disconnect();
@@ -95,10 +98,10 @@ class Orchestrator {
             this.ids.add(id);
 
             socket.emit("authenticated");
-            
+
             this.connections.set(socket.id, newPlayer);
             //@ts-ignore
-            
+
         })
         socket.on('disconnect', () => {
 
