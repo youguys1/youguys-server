@@ -21,6 +21,7 @@ class Orchestrator {
         this.pool = pool;
         this.lobbyFinished = this.lobbyFinished.bind(this);
         this.gameOver = this.gameOver.bind(this);
+        this.leaveTeam = this.leaveTeam.bind(this);
     }
 
     private async getInfoFromToken(token: string) {
