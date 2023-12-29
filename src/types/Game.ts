@@ -52,9 +52,7 @@ class Game {
 
     private registerListeners() {
         for (let i = 0; i < this.players.length; i++) {
-            this.players[i].socket.removeAllListeners("player_ready");
-            this.players[i].socket.removeAllListeners("player_not_ready");
-            this.players[i].socket.removeAllListeners("leave_team");
+            
 
 
 
