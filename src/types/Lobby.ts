@@ -93,12 +93,10 @@ class Lobby {
             console.log(this.players);
             await this.playerLeftTeam(player.id);
 
-            console.log("ABOUT TO BROADCASTR THE TEAM EARLY")
             this.broadcastToPlayers("team_update");
             this.players = this.players.filter((x) => x.id != player.id);
             this.playerIds = this.playerIds.filter((x) => x != player.id);
             if (this.players.length == 0) {
-                console.log("RETURNIGN EARLYYYY")
                 // kill lobby if everyone left the team
                 this.lobbyFinishedCallback(this.roomCode, this.players, false);
 
