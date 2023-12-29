@@ -19,6 +19,8 @@ class Orchestrator {
         this.roomCodeToGame = new Map();
         this.roomCodeToLobby = new Map();
         this.pool = pool;
+        this.lobbyFinished = this.lobbyFinished.bind(this);
+        this.gameOver = this.gameOver.bind(this);
     }
 
     private async getInfoFromToken(token: string) {
@@ -64,6 +66,8 @@ class Orchestrator {
     }
 
     private lobbyFinished(roomCode: string, players: Array<Player>) {
+        console.log(this.roomCodeToGame);
+        console.log(this.roomCodeToLobby)
         this.roomCodeToLobby.delete(roomCode);
         this.roomCodeToGame.set(roomCode, new Game(players, roomCode, this.gameOver));
         // await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES($1, $2, $3)", [teamId, document, new Date()])
