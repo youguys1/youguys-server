@@ -28,7 +28,7 @@ ioServer.on('connection', function (socket: Socket) {
     orchestrator.newConnection(socket);
 });
 
-ioServer.listen(http, { cors: { origin: process.env.REQUEST_ORIGIN } })
+ioServer.listen(http, { cors: { origin: ["http://localhost:3000", "http://localhost:3001"] } })
 
 http.listen(port, () => {
     console.log('Express server started on port: ' + port);
