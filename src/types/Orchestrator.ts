@@ -33,43 +33,27 @@ class Orchestrator {
     }
 
     private async getTeamInfo(id: number) {
-        const result = await this.pool.query('SELECT * FROM teams WHERE $1 in (user1_id, user2_id, user3_id, user4_id, user5_id) AND is_active=TRUE LIMIT 1', [id]);
-        const row = result.rows[0];
+        const result = await this.pool.query('SELECT teams.team_code, team_players.user_id FROM public.teams JOIN team_players ON team_players.team_id = teams.id WHERE team_players.leave_time IS NULL AND team_players.team_id=(select team_id from team_players WHERE user_id=$1 and leave_time IS NULL)', [id]);
         let playerIds = [];
-        for (let userId of [row.user1_id, row.user2_id, row.user3_id, row.user4_id, row.user5_id]) {
-            if (userId) {
-                playerIds.push(userId);
-            }
+        for (let row of result.rows) {
+            playerIds.push(row.user_id);
         }
-        return { roomCode: row.team_code, playerIds: playerIds, creationTime: row.creation_time };
+        return { roomCode: result.rows[0].team_code, playerIds: playerIds };
     }
 
     private async gameOver(roomCode: string, document: string) {
         this.roomCodeToGame.delete(roomCode);
-        await this.pool.query("INSERT INTO submissions((SELECT id from teams WHERE team_code=$1 AND is_active=TRUE), document, creation_time) VALUES($1, $2, $3)", [roomCode, document, new Date()])
+        await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES((SELECT id from teams WHERE team_code=$1), $2, $3)", [roomCode, document, new Date()])
     }
 
     // returns db id of new team row. TODO turn this into a transaction
-    private async leaveTeam(playerId: number, teamCode: string, playerIds: Array<number>, creationTime: Date) {
-        await this.pool.query("UPDATE teams SET is_active=FALSE WHERE team_code=$1 AND is_active=TRUE", [teamCode]); //set the old team to be inactive
-        let queryParams: any = [];
-        for (let i = 0; i < playerIds.length; i++) {
-            if (playerIds[i] != playerId) {
-                queryParams.push(playerIds[i]);
-            }
-        }
-        for (let i = 0; i < 5 - queryParams.length; i++) {
-            queryParams.push(null);
-        }
-        queryParams = queryParams.concat([teamCode, true, creationTime])
-        const result = await this.pool.query("INSERT INTO teams(user1_id, user2_id, user3_id, user4_id, user5_id, team_code, is_active, creation_time) VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id", queryParams);
-        return result.rows[0].id;
+    private async leaveTeam(playerId: number) {
+        await this.pool.query("UPDATE team_players SET leave_time=$1 WHERE user_id=$2 and leave_time IS NULL", [new Date(), playerId])
     }
 
     private lobbyFinished(roomCode: string, players: Array<Player>) {
         this.roomCodeToLobby.delete(roomCode);
         this.roomCodeToGame.set(roomCode, new Game(players, roomCode, this.gameOver));
-        // await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES($1, $2, $3)", [teamId, document, new Date()])
     }
 
     public newConnection(socket: Socket) {
@@ -91,26 +75,17 @@ class Orchestrator {
                 return;
             }
 
-
-            const { roomCode, playerIds, creationTime } = await this.getTeamInfo(id);
-            // if (numPlayers < 2 || numPlayers > 5) {
-            //     socket.emit("invalid_num_of_players");
-            //     socket.disconnect();
-            // }
+            const { roomCode, playerIds } = await this.getTeamInfo(id);
             let lobby;
             if (this.roomCodeToGame.has(roomCode)) {
                 socket.emit("game_already_started");
                 socket.disconnect();
-                // game = this.roomCodeToGame.get(roomCode);
             }
             else if (this.roomCodeToLobby.has(roomCode)) {
                 lobby = this.roomCodeToLobby.get(roomCode);
-
-                // console.log("Creating new game for team code:" + roomCode);
-                // game = new Game([], roomCode, teamId, numPlayers, this.gameOver);
             }
             else {
-                lobby = new Lobby([], roomCode, playerIds, creationTime, this.leaveTeam, this.lobbyFinished);
+                lobby = new Lobby([], roomCode, playerIds, this.leaveTeam, this.lobbyFinished);
                 this.roomCodeToLobby.set(roomCode, lobby);
 
             }
