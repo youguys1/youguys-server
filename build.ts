@@ -3,8 +3,6 @@
  */
 
 // @ts-ignore
-import fs from 'fs-extra';
-import Logger from 'jet-logger';
 
 
 try {
@@ -14,5 +12,5 @@ try {
     fs.copySync('./src/public', './dist/public');
     fs.copySync('./src/views', './dist/views');
 } catch (err) {
-    Logger.Err(err);
+    console.log(err);
 }
