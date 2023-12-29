@@ -1,9 +1,9 @@
 import './preStart'; // Must be the first import
-import app from '@server';
 import Http from 'http';
 import { Pool } from 'pg';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import Orchestrator from './types/Orchestrator';
+import app from './Server';
 
 const port = Number(process.env.PORT || 3001);
 const pool = new Pool({
