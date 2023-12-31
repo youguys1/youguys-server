@@ -49,7 +49,7 @@ class Orchestrator {
             for (let player of game?.players) {
                 if (this.connections.has(player.socket.id)) {
                     //@ts-ignore
-                    this.ids.delete(this.connections.get(socket.id).id);
+                    this.ids.delete(this.connections.get(player.socket.id).id);
                     this.connections.delete(player.socket.id);
                 }
             }
