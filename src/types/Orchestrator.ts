@@ -44,6 +44,18 @@ class Orchestrator {
     }
 
     private async gameOver(roomCode: string, document: string) {
+        const game = this.roomCodeToGame.get(roomCode);
+        if (game) {
+            for (let player of game?.players) {
+                if (this.connections.has(player.socket.id)) {
+                    //@ts-ignore
+                    this.ids.delete(this.connections.get(socket.id).id);
+                    this.connections.delete(player.socket.id);
+                }
+            }
+        }
+
+
         this.roomCodeToGame.delete(roomCode);
         await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES((SELECT id from teams WHERE team_code=$1), $2, $3)", [roomCode, document, new Date()]);
     }

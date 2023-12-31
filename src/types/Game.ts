@@ -12,7 +12,7 @@ interface GameInfo {
 
 
 class Game {
-    private players: Array<Player>;
+    public players: Array<Player>;
     private roomCode: string;
     private currentTurn: number;
     private currentSecondsRemaining: number;
