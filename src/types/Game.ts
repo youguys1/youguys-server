@@ -18,14 +18,14 @@ class Game {
     private currentSecondsRemaining: number;
     private prompt: string
     private document: string;
-    private NUM_TURNS = 100;
+    private numTurns = 100;
     private gameFinishedCallback: Function;
     private paused: boolean;
     private gameInfoInterval: any;
 
 
     constructor(players: Array<Player>, roomCode: string, gameFinishedCallback: Function) {
-        this.players = players;
+
         this.roomCode = roomCode;
         this.currentTurn = 0;
         this.currentSecondsRemaining = 20;
@@ -35,12 +35,61 @@ class Game {
         this.prompt = "A horse walks into a bar."
 
         this.gameInfoInterval = null;
+        this.players = [];
+        for (let i = 0; i < players.length; i++) {
+            this.addPlayer(players[i]);
+        }
         this.startGame();
     }
 
     addPlayer(player: Player) {
+
         this.players.push(player);
-        this.registerListeners();
+        player.socket.on("play_turn", (sentence) => {
+
+            if (this.paused) {
+                player.socket.emit("game_pause")
+            }
+            else if (this.players[this.currentTurn % this.players.length].id != player.id) {
+                player.socket.emit("not_your_turn");
+            }
+            else {
+                this.document += sentence;
+                this.currentTurn += 1;
+                this.currentSecondsRemaining = 20;
+
+                this.broadcastGameInfo();
+
+
+                if (this.currentTurn >= this.numTurns) {
+                    this.gameOver();
+                }
+            }
+        })
+        player.socket.on("disconnect", () => { //
+
+            if (player.id === this.players[this.currentTurn % this.players.length].id) {
+                this.numTurns -= 1;
+                this.currentSecondsRemaining = 20;
+            }
+            this.players = this.players.filter((otherPlayer: Player) => otherPlayer.id != player.id);
+
+
+            if (this.players.length == 0) {
+                clearInterval(this.gameInfoInterval);
+                this.gameFinishedCallback(this.roomCode, this.document);
+                return;
+            }
+
+
+            if (this.players.length == 1) {
+                this.paused = true;
+                this.broadcastToPlayers("game_pause");
+            }
+            this.broadcastGameInfo();
+
+        })
+
         player.socket.emit("game_start", this.prompt);
         if (this.paused && this.players.length >= 2) {
             this.broadcastToPlayers("game_unpause");
@@ -56,13 +105,14 @@ class Game {
     }
 
     private broadcastGameInfo() {
+
         let playerEmails = this.players.map((player: Player) => player.email);
         this.broadcastToPlayers("game_info", {
             playerEmails: playerEmails,
             currentDocument: this.document,
             currentTurn: this.players[this.currentTurn % this.players.length].email,
             secondsRemaining: this.currentSecondsRemaining,
-            turnsRemaining: this.NUM_TURNS - this.currentTurn,
+            turnsRemaining: this.numTurns - this.currentTurn,
 
         })
     }
@@ -71,7 +121,6 @@ class Game {
         console.log("Starting game for " + this.roomCode);
         this.broadcastToPlayers("game_start", this.prompt);
         this.broadcastGameInfo();
-        this.registerListeners();
         this.gameInfoInterval = setInterval(() => {
             if (!this.paused) {
                 this.currentSecondsRemaining -= 1;
@@ -83,59 +132,6 @@ class Game {
 
             this.broadcastGameInfo();
         }, 1000)
-    }
-
-    private registerListeners() {
-        for (let i = 0; i < this.players.length; i++) {
-
-
-
-
-            this.players[i].socket.on("play_turn", (sentence) => {
-                console.log("play turn event");
-                console.log(this.players)
-                if (this.paused) {
-                    this.players[i].socket.emit("game_pause")
-                }
-                else if (this.currentTurn % this.players.length != i) {
-                    console.log(i)
-                    console.log(this.currentTurn)
-                    this.players[i].socket.emit("not_your_turn");
-                }
-                else {
-                    this.document += sentence;
-                    this.currentTurn += 1;
-                    this.currentSecondsRemaining = 20;
-
-                    this.broadcastGameInfo();
-
-
-                    if (this.currentTurn >= this.NUM_TURNS) {
-                        this.gameOver();
-                    }
-                }
-            })
-            this.players[i].socket.on("disconnect", () => { //
-                console.log("player disconnected in the game setate")
-                this.players = this.players.filter((player: Player) => player.id != this.players[i].id);
-
-                if (this.players.length == 0) {
-                    clearInterval(this.gameInfoInterval)
-                    this.gameFinishedCallback(this.roomCode, this.document);
-                    return;
-                }
-
-                this.registerListeners();
-
-                if (this.players.length == 1) {
-                    console.log("pausing game")
-                    this.paused = true;
-                    this.broadcastToPlayers("game_pause");
-                }
-                this.broadcastGameInfo();
-
-            })
-        }
     }
 
     private gameOver() {
