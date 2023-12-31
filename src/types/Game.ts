@@ -55,6 +55,7 @@ class Game {
     private startGame() {
         console.log("Starting game for " + this.roomCode);
         this.broadcastToPlayers("game_start", this.prompt);
+        this.broadcastGameInfo();
         this.registerListeners();
         setInterval(() => {
             this.currentSecondsRemaining -= 1;
