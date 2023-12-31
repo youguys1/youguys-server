@@ -18,7 +18,7 @@ class Game {
     private currentSecondsRemaining: number;
     private prompt: string
     private document: string;
-    private numTurns = 100;
+    private numTurns: number;
     private gameFinishedCallback: Function;
     private paused: boolean;
     private gameInfoInterval: any;
@@ -28,7 +28,8 @@ class Game {
 
         this.roomCode = roomCode;
         this.currentTurn = 0;
-        this.currentSecondsRemaining = 20;
+        this.currentSecondsRemaining = 10;
+        this.numTurns = 25;
         this.document = "";
         this.gameFinishedCallback = gameFinishedCallback;
         this.paused = false;
@@ -56,7 +57,7 @@ class Game {
             else {
                 this.document += sentence;
                 this.currentTurn += 1;
-                this.currentSecondsRemaining = 20;
+                this.currentSecondsRemaining = 10;
 
                 this.broadcastGameInfo();
 
@@ -70,7 +71,7 @@ class Game {
 
             if (player.id === this.players[this.currentTurn % this.players.length].id) {
                 this.numTurns -= 1;
-                this.currentSecondsRemaining = 20;
+                this.currentSecondsRemaining = 10;
             }
             this.players = this.players.filter((otherPlayer: Player) => otherPlayer.id != player.id);
 
@@ -125,7 +126,7 @@ class Game {
             if (!this.paused) {
                 this.currentSecondsRemaining -= 1;
                 if (this.currentSecondsRemaining === 0) {
-                    this.currentSecondsRemaining = 20;
+                    this.currentSecondsRemaining = 10;
                     this.currentTurn += 1;
                 }
             }
