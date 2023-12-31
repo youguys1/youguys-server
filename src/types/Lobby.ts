@@ -78,7 +78,6 @@ class Lobby {
 
             this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
             if (this.players.length == 0) {
-                console.log("killing lobby");
                 // kill lobby if everyone left the team
                 this.lobbyFinishedCallback(this.roomCode, this.players, false);
 
@@ -126,8 +125,8 @@ class Lobby {
             this.players[i].socket.removeAllListeners("player_ready");
             this.players[i].socket.removeAllListeners("player_not_ready");
             this.players[i].socket.removeAllListeners("leave_team");
-            // this.players[i].socket.removeListener("disconnect", this.disconnectCallback);
         }
+
 
         this.lobbyFinishedCallback(this.roomCode, this.players, true);
     }
