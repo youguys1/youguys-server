@@ -46,13 +46,11 @@ class Orchestrator {
     private async gameOver(roomCode: string, document: string) {
         const game = this.roomCodeToGame.get(roomCode);
         if (game) {
-            for (let player of game?.players) {
-                if (this.connections.has(player.socket.id)) {
-                    //@ts-ignore
-                    this.ids.delete(this.connections.get(player.socket.id).id);
-                    this.connections.delete(player.socket.id);
-                }
+            for (let player of game.players) {
+                this.ids.delete(player.id);
+                this.connections.delete(player.socket.id);
             }
+
         }
 
 
@@ -72,11 +70,9 @@ class Orchestrator {
         } else {
             if (lobby) {
                 for (let player of lobby.players) {
-                    if (this.connections.has(player.socket.id)) {
-                        //@ts-ignore
-                        this.ids.delete(this.connections.get(socket.id).id);
-                        this.connections.delete(player.socket.id);
-                    }
+                    this.ids.delete(player.id);
+                    this.connections.delete(player.socket.id);
+
                 }
             }
         }
