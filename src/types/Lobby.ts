@@ -10,6 +10,7 @@ interface LobbyInfo {
     players: Array<LobbyPlayerInfo>
 }
 
+
 class Lobby {
     private players: Array<Player>; // the players active in the lobby
     private playerIds: Array<number>; //the ids of everyone on your team
