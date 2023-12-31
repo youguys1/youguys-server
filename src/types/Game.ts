@@ -31,7 +31,7 @@ class Game {
         this.document = "";
         this.gameFinishedCallback = gameFinishedCallback;
         this.paused = false;
-        this.prompt = "This is the prompt. Let me know what a good idea for the first one to run tests with should be, Burg."
+        this.prompt = "A horse walks into a bar."
         this.startGame();
     }
 
@@ -132,12 +132,6 @@ class Game {
                     this.broadcastToPlayers("game_pause");
                 }
                 this.broadcastGameInfo();
-
-                // this.broadcastToPlayers("turn_played", {
-                //     currentTurn: this.players[this.currentTurn].email,
-                //     sentence: ""
-                // });
-
 
             })
         }
