@@ -52,7 +52,7 @@ class Game {
 
     private registerListeners() {
         for (let i = 0; i < this.players.length; i++) {
-            
+
 
 
 
@@ -103,13 +103,12 @@ class Game {
                     this.paused = true;
                     this.broadcastToPlayers("game_pause");
                 }
-                else {
-                    console.log(this.currentTurn);
-                    this.broadcastToPlayers("turn_played", {
-                        currentTurn: this.players[this.currentTurn].email,
-                        sentence: ""
-                    });
-                }
+
+                this.broadcastToPlayers("turn_played", {
+                    currentTurn: this.players[this.currentTurn].email,
+                    sentence: ""
+                });
+
 
             })
         }
