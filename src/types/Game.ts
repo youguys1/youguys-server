@@ -38,11 +38,12 @@ class Game {
     addPlayer(player: Player) {
         this.players.push(player);
         this.registerListeners();
-        player.socket.emit("game_start", this.prompt)
+        player.socket.emit("game_start", this.prompt);
         if (this.paused && this.players.length >= 2) {
             this.broadcastToPlayers("game_unpause");
             this.paused = false;
         }
+        this.broadcastGameInfo();
     }
 
     private broadcastToPlayers(messageType: string, data: any = null) {
@@ -115,10 +116,6 @@ class Game {
                 console.log("player disconnected in the game setate")
                 this.players = this.players.filter((player: Player) => player.id != this.players[i].id);
 
-                // if (this.currentTurn % this.players.length == i) {
-                //     console.log("it was his turn")
-                //     this.currentTurn = (this.currentTurn + 1) % this.players.length;
-                // }
                 if (this.players.length == 0) {
                     this.gameFinishedCallback(this.roomCode, this.document);
                     return;
