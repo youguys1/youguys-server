@@ -21,6 +21,7 @@ class Game {
     private NUM_TURNS = 100;
     private gameFinishedCallback: Function;
     private paused: boolean;
+    private gameInfoInterval: any;
 
 
     constructor(players: Array<Player>, roomCode: string, gameFinishedCallback: Function) {
@@ -32,6 +33,8 @@ class Game {
         this.gameFinishedCallback = gameFinishedCallback;
         this.paused = false;
         this.prompt = "A horse walks into a bar."
+
+        this.gameInfoInterval = null;
         this.startGame();
     }
 
@@ -69,7 +72,7 @@ class Game {
         this.broadcastToPlayers("game_start", this.prompt);
         this.broadcastGameInfo();
         this.registerListeners();
-        setInterval(() => {
+        this.gameInfoInterval = setInterval(() => {
             if (!this.paused) {
                 this.currentSecondsRemaining -= 1;
                 if (this.currentSecondsRemaining === 0) {
@@ -117,6 +120,7 @@ class Game {
                 this.players = this.players.filter((player: Player) => player.id != this.players[i].id);
 
                 if (this.players.length == 0) {
+                    clearInterval(this.gameInfoInterval)
                     this.gameFinishedCallback(this.roomCode, this.document);
                     return;
                 }
@@ -141,6 +145,7 @@ class Game {
             this.players[i].socket.removeAllListeners();
             this.players[i].socket.disconnect();
         }
+        clearInterval(this.gameInfoInterval)
         this.gameFinishedCallback(this.roomCode, this.document);
     }
 
