@@ -12,7 +12,7 @@ interface LobbyInfo {
 
 
 class Lobby {
-    private players: Array<Player>; // the players active in the lobby
+    public players: Array<Player>; // the players active in the lobby
     private playerIds: Array<number>; //the ids of everyone on your team
     private roomCode: string;
     private playerLeftTeam: Function;

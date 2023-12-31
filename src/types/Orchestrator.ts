@@ -65,9 +65,20 @@ class Orchestrator {
     }
 
     private lobbyFinished(roomCode: string, players: Array<Player>, startGame: boolean) {
+        const lobby = this.roomCodeToLobby.get(roomCode);
         this.roomCodeToLobby.delete(roomCode);
         if (startGame) {
             this.roomCodeToGame.set(roomCode, new Game(players, roomCode, this.gameOver));
+        } else {
+            if (lobby) {
+                for (let player of lobby.players) {
+                    if (this.connections.has(player.socket.id)) {
+                        //@ts-ignore
+                        this.ids.delete(this.connections.get(socket.id).id);
+                        this.connections.delete(player.socket.id);
+                    }
+                }
+            }
         }
 
     }
