@@ -1,5 +1,16 @@
 import Player from "./Player";
 
+
+interface GameInfo {
+    playerEmails: Array<string>;
+    currentDocument: string;
+    currentTurn: string;
+    secondsRemaining: number;
+    turnsRemaining: number;
+}
+
+
+
 class Game {
     private players: Array<Player>;
     private roomCode: string;
@@ -58,11 +69,14 @@ class Game {
         this.broadcastGameInfo();
         this.registerListeners();
         setInterval(() => {
-            this.currentSecondsRemaining -= 1;
-            if (this.currentSecondsRemaining === 0) {
-                this.currentSecondsRemaining = 20;
-                this.currentTurn += 1;
+            if (!this.paused) {
+                this.currentSecondsRemaining -= 1;
+                if (this.currentSecondsRemaining === 0) {
+                    this.currentSecondsRemaining = 20;
+                    this.currentTurn += 1;
+                }
             }
+
             this.broadcastGameInfo();
         }, 1000)
     }
@@ -117,6 +131,7 @@ class Game {
                     this.paused = true;
                     this.broadcastToPlayers("game_pause");
                 }
+                this.broadcastGameInfo();
 
                 // this.broadcastToPlayers("turn_played", {
                 //     currentTurn: this.players[this.currentTurn].email,
