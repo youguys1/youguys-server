@@ -4,8 +4,9 @@ class Game {
     private players: Array<Player>;
     private roomCode: string;
     private currentTurn: number;
+    private currentSecondsRemaining: number;
+    private prompt: string
     private document: string;
-    private turnsPlayed: number;
     private NUM_TURNS = 100;
     private gameFinishedCallback: Function;
     private paused: boolean;
@@ -15,20 +16,18 @@ class Game {
         this.players = players;
         this.roomCode = roomCode;
         this.currentTurn = 0;
+        this.currentSecondsRemaining = 20;
         this.document = "";
-        this.turnsPlayed = 0;
         this.gameFinishedCallback = gameFinishedCallback;
         this.paused = false;
+        this.prompt = "This is the prompt. Let me know what a good idea for the first one to run tests with should be, Burg."
         this.startGame();
     }
 
     addPlayer(player: Player) {
         this.players.push(player);
         this.registerListeners();
-        player.socket.emit("game_start", {
-            currentTurn: this.players[this.currentTurn].email,
-            currentDocument: this.document,
-        })
+        player.socket.emit("game_start", this.prompt)
         if (this.paused && this.players.length >= 2) {
             this.broadcastToPlayers("game_unpause");
             this.paused = false;
@@ -41,13 +40,30 @@ class Game {
         }
     }
 
+    private broadcastGameInfo() {
+        let playerEmails = this.players.map((player: Player) => player.email);
+        this.broadcastToPlayers("game_info", {
+            playerEmails: playerEmails,
+            currentDocument: this.document,
+            currentTurn: this.players[this.currentTurn % this.players.length].email,
+            secondsRemaining: this.currentSecondsRemaining,
+            turnsRemaining: this.NUM_TURNS - this.currentTurn,
+
+        })
+    }
+
     private startGame() {
         console.log("Starting game for " + this.roomCode);
-        this.broadcastToPlayers("game_start", {
-            currentTurn: this.players[this.currentTurn].email,
-            currentDocument: "",
-        });
+        this.broadcastToPlayers("game_start", this.prompt);
         this.registerListeners();
+        setInterval(() => {
+            this.currentSecondsRemaining -= 1;
+            if (this.currentSecondsRemaining === 0) {
+                this.currentSecondsRemaining = 20;
+                this.currentTurn += 1;
+            }
+            this.broadcastGameInfo();
+        }, 1000)
     }
 
     private registerListeners() {
@@ -62,23 +78,20 @@ class Game {
                 if (this.paused) {
                     this.players[i].socket.emit("game_pause")
                 }
-                else if (this.currentTurn != i) {
+                else if (this.currentTurn % this.players.length != i) {
                     console.log(i)
                     console.log(this.currentTurn)
                     this.players[i].socket.emit("not_your_turn");
                 }
                 else {
                     this.document += sentence;
-                    this.currentTurn = (this.currentTurn + 1) % this.players.length;
-                    this.turnsPlayed += 1;
+                    this.currentTurn += 1;
+                    this.currentSecondsRemaining = 20;
 
-                    this.broadcastToPlayers("turn_played", {
-                        currentTurn: this.players[this.currentTurn].email,
-                        sentence: sentence
-                    });
+                    this.broadcastGameInfo();
 
 
-                    if (this.turnsPlayed >= this.NUM_TURNS) {
+                    if (this.currentTurn >= this.NUM_TURNS) {
                         this.gameOver();
                     }
                 }
@@ -87,10 +100,10 @@ class Game {
                 console.log("player disconnected in the game setate")
                 this.players = this.players.filter((player: Player) => player.id != this.players[i].id);
 
-                if (this.currentTurn == i) {
-                    console.log("it was his turn")
-                    this.currentTurn = (this.currentTurn + 1) % this.players.length;
-                }
+                // if (this.currentTurn % this.players.length == i) {
+                //     console.log("it was his turn")
+                //     this.currentTurn = (this.currentTurn + 1) % this.players.length;
+                // }
                 if (this.players.length == 0) {
                     this.gameFinishedCallback(this.roomCode, this.document);
                     return;
@@ -104,10 +117,10 @@ class Game {
                     this.broadcastToPlayers("game_pause");
                 }
 
-                this.broadcastToPlayers("turn_played", {
-                    currentTurn: this.players[this.currentTurn].email,
-                    sentence: ""
-                });
+                // this.broadcastToPlayers("turn_played", {
+                //     currentTurn: this.players[this.currentTurn].email,
+                //     sentence: ""
+                // });
 
 
             })
