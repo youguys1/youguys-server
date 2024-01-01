@@ -53,11 +53,11 @@ class Orchestrator {
 
         }
         this.roomCodeToGame.delete(roomCode);
-        await this.pool.query("INSERT INTO submissions(team_id, document, creation_time, contest_id) VALUES((SELECT id from teams WHERE team_code=$1), $2, NOW(), $3)", [roomCode, document, contestId]);
+        this.pool.query("INSERT INTO submissions(team_id, document, creation_time, contest_id) VALUES((SELECT id from teams WHERE team_code=$1), $2, NOW(), $3)", [roomCode, document, contestId]);
     }
 
     private async leaveTeam(playerId: number) {
-        await this.pool.query("UPDATE team_players SET leave_time=$1 WHERE user_id=$2 and leave_time IS NULL", [new Date(), playerId])
+        await this.pool.query("UPDATE team_players SET leave_time=NOW() WHERE user_id=$1 and leave_time IS NULL", [playerId])
     }
 
     private async lobbyFinished(roomCode: string, players: Array<Player>, startGame: boolean) {
@@ -71,11 +71,9 @@ class Orchestrator {
                 for (let player of lobby.players) {
                     this.ids.delete(player.id);
                     this.connections.delete(player.socket.id);
-
                 }
             }
         }
-
     }
 
     public newConnection(socket: Socket) {

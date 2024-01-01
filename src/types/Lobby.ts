@@ -66,7 +66,7 @@ class Lobby {
             console.log("Player " + player.email + " is ready.")
             player.ready = true;
             this.broadcastLobbyInfo();
-            await this.newPlayerReady();
+            this.newPlayerReady();
         });
         player.socket.on("player_not_ready", () => {
             player.ready = false;
@@ -79,7 +79,7 @@ class Lobby {
             this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
             if (this.players.length == 0) {
                 // kill lobby if everyone left the team
-                await this.lobbyFinishedCallback(this.roomCode, this.players, false);
+                this.lobbyFinishedCallback(this.roomCode, this.players, false);
 
                 return;
             }
@@ -98,7 +98,7 @@ class Lobby {
             this.playerIds = this.playerIds.filter((x) => x != player.id);
             if (this.players.length == 0) {
                 // kill lobby if everyone left the team
-                await this.lobbyFinishedCallback(this.roomCode, this.players, false);
+                this.lobbyFinishedCallback(this.roomCode, this.players, false);
 
                 return;
             }
@@ -127,10 +127,8 @@ class Lobby {
             this.players[i].socket.removeAllListeners("leave_team");
         }
 
-
-        await this.lobbyFinishedCallback(this.roomCode, this.players, true);
+        this.lobbyFinishedCallback(this.roomCode, this.players, true);
     }
-
 
 
 }
