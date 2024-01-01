@@ -16,7 +16,8 @@ class Game {
     private roomCode: string;
     private currentTurn: number;
     private currentSecondsRemaining: number;
-    private prompt: string
+    private prompt: string;
+    private contestId: number;
     private document: string;
     private numTurns: number;
     private gameFinishedCallback: Function;
@@ -24,7 +25,7 @@ class Game {
     private gameInfoInterval: any;
 
 
-    constructor(players: Array<Player>, roomCode: string, gameFinishedCallback: Function) {
+    constructor(players: Array<Player>, roomCode: string, prompt: string, contestId: number, gameFinishedCallback: Function) {
 
         this.roomCode = roomCode;
         this.currentTurn = 0;
@@ -33,8 +34,8 @@ class Game {
         this.document = "";
         this.gameFinishedCallback = gameFinishedCallback;
         this.paused = false;
-        this.prompt = "A horse walks into a bar."
-
+        this.prompt = prompt;
+        this.contestId = contestId;
         this.gameInfoInterval = null;
         this.players = [];
         for (let i = 0; i < players.length; i++) {
@@ -78,7 +79,7 @@ class Game {
 
             if (this.players.length == 0) {
                 clearInterval(this.gameInfoInterval);
-                this.gameFinishedCallback(this.roomCode, this.document);
+                this.gameFinishedCallback(this.roomCode, this.document, this.contestId);
                 return;
             }
 
@@ -143,7 +144,7 @@ class Game {
             this.players[i].socket.disconnect();
         }
         clearInterval(this.gameInfoInterval)
-        this.gameFinishedCallback(this.roomCode, this.document);
+        this.gameFinishedCallback(this.roomCode, this.document, this.contestId);
     }
 
 }

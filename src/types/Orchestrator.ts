@@ -25,7 +25,7 @@ class Orchestrator {
     }
 
     private async getInfoFromToken(token: string) {
-        const result = await this.pool.query('SELECT "userId", email from sessions INNER JOIN users ON users.id = "userId" WHERE "sessionToken"=$1 AND expires > CURRENT_DATE LIMIT 1', [token]);
+        const result = await this.pool.query('SELECT "userId", email from sessions INNER JOIN users ON users.id = "userId" WHERE "sessionToken"=$1 AND expires > NOW() LIMIT 1', [token]);
         if (result.rows.length == 0) {
             return { id: null };
         }
@@ -43,7 +43,7 @@ class Orchestrator {
         return { roomCode: result.rows[0].team_code, playerIds: playerIds };
     }
 
-    private async gameOver(roomCode: string, document: string) {
+    private async gameOver(roomCode: string, document: string, contestId: number) {
         const game = this.roomCodeToGame.get(roomCode);
         if (game) {
             for (let player of game.players) {
@@ -52,21 +52,20 @@ class Orchestrator {
             }
 
         }
-
-
         this.roomCodeToGame.delete(roomCode);
-        await this.pool.query("INSERT INTO submissions(team_id, document, creation_time) VALUES((SELECT id from teams WHERE team_code=$1), $2, $3)", [roomCode, document, new Date()]);
+        await this.pool.query("INSERT INTO submissions(team_id, document, creation_time, contest_id) VALUES((SELECT id from teams WHERE team_code=$1), $2, NOW(), $3)", [roomCode, document, contestId]);
     }
 
     private async leaveTeam(playerId: number) {
         await this.pool.query("UPDATE team_players SET leave_time=$1 WHERE user_id=$2 and leave_time IS NULL", [new Date(), playerId])
     }
 
-    private lobbyFinished(roomCode: string, players: Array<Player>, startGame: boolean) {
+    private async lobbyFinished(roomCode: string, players: Array<Player>, startGame: boolean) {
         const lobby = this.roomCodeToLobby.get(roomCode);
         this.roomCodeToLobby.delete(roomCode);
         if (startGame) {
-            this.roomCodeToGame.set(roomCode, new Game(players, roomCode, this.gameOver));
+            const result = await this.pool.query("SELECT contests.id AS contest_id, prompts.prompt FROM contests JOIN prompts ON contests.prompt_id = prompts.id WHERE contests.start_time <= NOW() AND contests.end_time >= NOW() LIMIT 1"); // there should be exactly one row in here, if not, it's because we forgot to set up the contest
+            this.roomCodeToGame.set(roomCode, new Game(players, roomCode, result.rows[0].prompt, result.rows[0].contest_id, this.gameOver));
         } else {
             if (lobby) {
                 for (let player of lobby.players) {
