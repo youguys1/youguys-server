@@ -130,6 +130,9 @@ class Game {
                     this.currentSecondsRemaining = 10;
                     this.currentTurn += 1;
                 }
+                if (this.currentTurn >= this.numTurns) {
+                    this.gameOver();
+                }
             }
 
             this.broadcastGameInfo();
