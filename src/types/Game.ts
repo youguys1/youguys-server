@@ -14,7 +14,7 @@ export interface GameInfo {
     turnsRemaining: number;
 }
 
-
+const TURN_LENGTH_SECONDS = 15
 
 class Game {
     public players: Array<Player>;
@@ -36,7 +36,7 @@ class Game {
         this.teamId = teamId;
         this.submissionId = submissionId
         this.currentTurn = 0;
-        this.currentSecondsRemaining = 10;
+        this.currentSecondsRemaining = TURN_LENGTH_SECONDS;
         this.numTurns = 25;
         this.entries = [];
         this.gameFinishedCallback = gameFinishedCallback;
@@ -66,7 +66,7 @@ class Game {
             else {
                 if (sentence !== "") {
                     this.entries.push({ content: sentence, email: player.email });
-                    this.currentSecondsRemaining = 10;
+                    this.currentSecondsRemaining = TURN_LENGTH_SECONDS;
                     this.onNewEntry(sentence, this.submissionId, player.id);
                     this.document += ". " + sentence;
                 }
@@ -81,7 +81,7 @@ class Game {
 
             if (player.id === this.players[this.currentTurn % this.players.length].id) {
                 this.numTurns -= 1;
-                this.currentSecondsRemaining = 10;
+                this.currentSecondsRemaining = TURN_LENGTH_SECONDS;
             }
             this.players = this.players.filter((otherPlayer: Player) => otherPlayer.id != player.id);
 
@@ -136,7 +136,7 @@ class Game {
             if (!this.paused) {
                 this.currentSecondsRemaining -= 1;
                 if (this.currentSecondsRemaining === 0) {
-                    this.currentSecondsRemaining = 10;
+                    this.currentSecondsRemaining = TURN_LENGTH_SECONDS;
                     this.currentTurn += 1;
                 }
                 if (this.currentTurn >= this.numTurns) {
