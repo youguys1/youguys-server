@@ -12,28 +12,30 @@ interface GameInfo {
 
 
 class Game {
-    private players: Array<Player>;
+    public players: Array<Player>;
     private roomCode: string;
     private currentTurn: number;
     private currentSecondsRemaining: number;
-    private prompt: string
+    private prompt: string;
+    private contestId: number;
     private document: string;
-    private numTurns = 100;
+    private numTurns: number;
     private gameFinishedCallback: Function;
     private paused: boolean;
     private gameInfoInterval: any;
 
 
-    constructor(players: Array<Player>, roomCode: string, gameFinishedCallback: Function) {
+    constructor(players: Array<Player>, roomCode: string, prompt: string, contestId: number, gameFinishedCallback: Function) {
 
         this.roomCode = roomCode;
         this.currentTurn = 0;
-        this.currentSecondsRemaining = 20;
+        this.currentSecondsRemaining = 10;
+        this.numTurns = 25;
         this.document = "";
         this.gameFinishedCallback = gameFinishedCallback;
         this.paused = false;
-        this.prompt = "A horse walks into a bar."
-
+        this.prompt = prompt;
+        this.contestId = contestId;
         this.gameInfoInterval = null;
         this.players = [];
         for (let i = 0; i < players.length; i++) {
@@ -56,7 +58,7 @@ class Game {
             else {
                 this.document += sentence;
                 this.currentTurn += 1;
-                this.currentSecondsRemaining = 20;
+                this.currentSecondsRemaining = 10;
 
                 this.broadcastGameInfo();
 
@@ -70,14 +72,14 @@ class Game {
 
             if (player.id === this.players[this.currentTurn % this.players.length].id) {
                 this.numTurns -= 1;
-                this.currentSecondsRemaining = 20;
+                this.currentSecondsRemaining = 10;
             }
             this.players = this.players.filter((otherPlayer: Player) => otherPlayer.id != player.id);
 
 
             if (this.players.length == 0) {
                 clearInterval(this.gameInfoInterval);
-                this.gameFinishedCallback(this.roomCode, this.document);
+                this.gameFinishedCallback(this.roomCode, this.document, this.contestId);
                 return;
             }
 
@@ -125,8 +127,11 @@ class Game {
             if (!this.paused) {
                 this.currentSecondsRemaining -= 1;
                 if (this.currentSecondsRemaining === 0) {
-                    this.currentSecondsRemaining = 20;
+                    this.currentSecondsRemaining = 10;
                     this.currentTurn += 1;
+                }
+                if (this.currentTurn >= this.numTurns) {
+                    this.gameOver();
                 }
             }
 
@@ -142,7 +147,7 @@ class Game {
             this.players[i].socket.disconnect();
         }
         clearInterval(this.gameInfoInterval)
-        this.gameFinishedCallback(this.roomCode, this.document);
+        this.gameFinishedCallback(this.roomCode, this.document, this.contestId);
     }
 
 }

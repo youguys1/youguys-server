@@ -12,7 +12,7 @@ interface LobbyInfo {
 
 
 class Lobby {
-    private players: Array<Player>; // the players active in the lobby
+    public players: Array<Player>; // the players active in the lobby
     private playerIds: Array<number>; //the ids of everyone on your team
     private roomCode: string;
     private playerLeftTeam: Function;
@@ -62,7 +62,7 @@ class Lobby {
         this.players.push(player);
 
         this.broadcastLobbyInfo();
-        player.socket.on("player_ready", () => {
+        player.socket.on("player_ready", async () => {
             console.log("Player " + player.email + " is ready.")
             player.ready = true;
             this.broadcastLobbyInfo();
@@ -74,7 +74,7 @@ class Lobby {
             this.broadcastLobbyInfo();
         });
 
-        player.socket.on("disconnect", () => {
+        player.socket.on("disconnect", async () => {
 
             this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
             if (this.players.length == 0) {
@@ -109,7 +109,7 @@ class Lobby {
         })
     }
 
-    private newPlayerReady() {
+    private async newPlayerReady() {
         if (this.players.length != this.playerIds.length) {
             return;
         }
@@ -127,10 +127,8 @@ class Lobby {
             this.players[i].socket.removeAllListeners("leave_team");
         }
 
-
         this.lobbyFinishedCallback(this.roomCode, this.players, true);
     }
-
 
 
 }
