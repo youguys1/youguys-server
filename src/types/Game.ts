@@ -1,10 +1,15 @@
 import Player from "./Player";
 
 
-interface GameInfo {
+export interface Entry {
+    email: string,
+    content: string
+}
+
+export interface GameInfo {
     playerEmails: Array<string>;
-    currentDocument: string;
     currentTurn: string;
+    entries: Array<Entry>;
     secondsRemaining: number;
     turnsRemaining: number;
 }
@@ -13,31 +18,34 @@ interface GameInfo {
 
 class Game {
     public players: Array<Player>;
-    private roomCode: string;
+    private teamId: number;
+    private submissionId: number;
     private currentTurn: number;
     private currentSecondsRemaining: number;
     private prompt: string;
-    private contestId: number;
-    private document: string;
+    private entries: Array<Entry>;
     private numTurns: number;
     private gameFinishedCallback: Function;
+    private onNewEntry: Function;
     private paused: boolean;
     private gameInfoInterval: any;
+    private document: string;
 
 
-    constructor(players: Array<Player>, roomCode: string, prompt: string, contestId: number, gameFinishedCallback: Function) {
-
-        this.roomCode = roomCode;
+    constructor(players: Array<Player>, teamId: number, submissionId: number, prompt: string, gameFinishedCallback: Function, onNewEntry: Function) {
+        this.teamId = teamId;
+        this.submissionId = submissionId
         this.currentTurn = 0;
         this.currentSecondsRemaining = 10;
         this.numTurns = 25;
-        this.document = "";
+        this.entries = [];
         this.gameFinishedCallback = gameFinishedCallback;
+        this.onNewEntry = onNewEntry;
         this.paused = false;
         this.prompt = prompt;
-        this.contestId = contestId;
         this.gameInfoInterval = null;
         this.players = [];
+        this.document = "";
         for (let i = 0; i < players.length; i++) {
             this.addPlayer(players[i]);
         }
@@ -56,13 +64,14 @@ class Game {
                 player.socket.emit("not_your_turn");
             }
             else {
-                this.document += sentence;
+                if (sentence !== "") {
+                    this.entries.push({ content: sentence, email: player.email });
+                    this.currentSecondsRemaining = 10;
+                    this.onNewEntry(sentence, this.submissionId, player.id);
+                    this.document += ". " + sentence;
+                }
                 this.currentTurn += 1;
-                this.currentSecondsRemaining = 10;
-
                 this.broadcastGameInfo();
-
-
                 if (this.currentTurn >= this.numTurns) {
                     this.gameOver();
                 }
@@ -79,7 +88,7 @@ class Game {
 
             if (this.players.length == 0) {
                 clearInterval(this.gameInfoInterval);
-                this.gameFinishedCallback(this.roomCode, this.document, this.contestId);
+                this.gameFinishedCallback(this.teamId, this.document);
                 return;
             }
 
@@ -111,7 +120,7 @@ class Game {
         let playerEmails = this.players.map((player: Player) => player.email);
         this.broadcastToPlayers("game_info", {
             playerEmails: playerEmails,
-            currentDocument: this.document,
+            entries: this.entries,
             currentTurn: this.players[this.currentTurn % this.players.length].email,
             secondsRemaining: this.currentSecondsRemaining,
             turnsRemaining: this.numTurns - this.currentTurn,
@@ -120,7 +129,7 @@ class Game {
     }
 
     private startGame() {
-        console.log("Starting game for " + this.roomCode);
+        console.log("Starting game for " + this.teamId);
         this.broadcastToPlayers("game_start", this.prompt);
         this.broadcastGameInfo();
         this.gameInfoInterval = setInterval(() => {
@@ -140,14 +149,15 @@ class Game {
     }
 
     private gameOver() {
-        console.log("Ending game for " + this.roomCode);
+        console.log("Ending game for " + this.teamId);
+        this.broadcastGameInfo();
         for (let i = 0; i < this.players.length; i++) {
-            this.players[i].socket.emit("game_over", this.document);
+            this.players[i].socket.emit("game_over");
             this.players[i].socket.removeAllListeners();
             this.players[i].socket.disconnect();
         }
-        clearInterval(this.gameInfoInterval)
-        this.gameFinishedCallback(this.roomCode, this.document, this.contestId);
+        clearInterval(this.gameInfoInterval);
+        this.gameFinishedCallback(this.teamId, this.document);
     }
 
 }

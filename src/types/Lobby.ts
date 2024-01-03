@@ -14,14 +14,14 @@ interface LobbyInfo {
 class Lobby {
     public players: Array<Player>; // the players active in the lobby
     private playerIds: Array<number>; //the ids of everyone on your team
-    private roomCode: string;
+    private teamId: number;
     private playerLeftTeam: Function;
     private lobbyFinishedCallback: Function;
 
 
-    constructor(players: Array<Player>, roomCode: string, playerIds: Array<number>, playerLeftTeam: Function, lobbyFinishedCallback: Function) {
+    constructor(players: Array<Player>, teamId: number, playerIds: Array<number>, playerLeftTeam: Function, lobbyFinishedCallback: Function) {
         this.players = players;
-        this.roomCode = roomCode;
+        this.teamId = teamId;
         this.playerIds = playerIds;
         this.playerLeftTeam = playerLeftTeam;
         this.lobbyFinishedCallback = lobbyFinishedCallback;
@@ -79,7 +79,7 @@ class Lobby {
             this.players = this.players.filter((lobbyPlayer) => lobbyPlayer.id != player.id);
             if (this.players.length == 0) {
                 // kill lobby if everyone left the team
-                this.lobbyFinishedCallback(this.roomCode, this.players, false);
+                this.lobbyFinishedCallback(this.teamId, this.players, false);
 
                 return;
             }
@@ -98,7 +98,7 @@ class Lobby {
             this.playerIds = this.playerIds.filter((x) => x != player.id);
             if (this.players.length == 0) {
                 // kill lobby if everyone left the team
-                this.lobbyFinishedCallback(this.roomCode, this.players, false);
+                this.lobbyFinishedCallback(this.teamId, this.players, false);
 
                 return;
             }
@@ -127,7 +127,7 @@ class Lobby {
             this.players[i].socket.removeAllListeners("leave_team");
         }
 
-        this.lobbyFinishedCallback(this.roomCode, this.players, true);
+        this.lobbyFinishedCallback(this.teamId, this.players, true);
     }
 
 
