@@ -8,20 +8,21 @@ class Orchestrator {
 
     private connections: Map<string, Player>;
     private ids: Set<number>;
-    private roomCodeToGame: Map<string, Game>;
-    private roomCodeToLobby: Map<string, Lobby>;
+    private teamIdToGame: Map<number, Game>;
+    private teamIdToLobby: Map<number, Lobby>;
     private pool: Pool;
 
     constructor(pool: Pool) {
 
         this.connections = new Map();
         this.ids = new Set();
-        this.roomCodeToGame = new Map();
-        this.roomCodeToLobby = new Map();
+        this.teamIdToGame = new Map();
+        this.teamIdToLobby = new Map();
         this.pool = pool;
         this.lobbyFinished = this.lobbyFinished.bind(this);
         this.gameOver = this.gameOver.bind(this);
         this.leaveTeam = this.leaveTeam.bind(this);
+        this.newEntry = this.newEntry.bind(this);
     }
 
     private async getInfoFromToken(token: string) {
@@ -34,17 +35,17 @@ class Orchestrator {
 
     private async getTeamInfo(id: number) {
         console.log(id)
-        const result = await this.pool.query('SELECT teams.team_code, team_players.user_id FROM public.teams JOIN team_players ON team_players.team_id = teams.id WHERE team_players.leave_time IS NULL AND team_players.team_id=(select team_id from team_players WHERE user_id=$1 and leave_time IS NULL)', [id]);
+        const result = await this.pool.query('SELECT teams.id AS team_id, team_players.user_id FROM public.teams JOIN team_players ON team_players.team_id = teams.id WHERE team_players.leave_time IS NULL AND team_players.team_id=(select team_id from team_players WHERE user_id=$1 and leave_time IS NULL)', [id]);
         let playerIds = [];
         console.log(result.rows)
         for (let row of result.rows) {
             playerIds.push(row.user_id);
         }
-        return { roomCode: result.rows[0].team_code, playerIds: playerIds };
+        return { playerIds: playerIds, teamId: result.rows[0].team_id };
     }
 
-    private async gameOver(roomCode: string, document: string, contestId: number) {
-        const game = this.roomCodeToGame.get(roomCode);
+    private async gameOver(teamId: number, document: string) {
+        const game = this.teamIdToGame.get(teamId);
         if (game) {
             for (let player of game.players) {
                 this.ids.delete(player.id);
@@ -52,20 +53,27 @@ class Orchestrator {
             }
 
         }
-        this.roomCodeToGame.delete(roomCode);
-        this.pool.query("INSERT INTO submissions(team_id, document, creation_time, contest_id) VALUES((SELECT id from teams WHERE team_code=$1), $2, NOW(), $3)", [roomCode, document, contestId]);
+        this.teamIdToGame.delete(teamId);
+        this.pool.query("UPDATE submissions SET end_time=NOW(), document_legacy=$1 WHERE team_id=$2 AND end_time IS NULL", [document, teamId]);
+    }
+
+    private newEntry(entry: string, submissionId: string, userId: number) {
+        this.pool.query("INSERT INTO entries(content, submission_id, user_id, creation_time) VALUES($1, $2, $3, NOW())", [entry, submissionId, userId])
     }
 
     private async leaveTeam(playerId: number) {
         await this.pool.query("UPDATE team_players SET leave_time=NOW() WHERE user_id=$1 and leave_time IS NULL", [playerId])
     }
 
-    private async lobbyFinished(roomCode: string, players: Array<Player>, startGame: boolean) {
-        const lobby = this.roomCodeToLobby.get(roomCode);
-        this.roomCodeToLobby.delete(roomCode);
+    private async lobbyFinished(teamId: number, players: Array<Player>, startGame: boolean) {
+        const lobby = this.teamIdToLobby.get(teamId);
+        this.teamIdToLobby.delete(teamId);
         if (startGame) {
             const result = await this.pool.query("SELECT contests.id AS contest_id, prompts.prompt FROM contests JOIN prompts ON contests.prompt_id = prompts.id WHERE contests.start_time <= NOW() AND contests.end_time >= NOW() LIMIT 1"); // there should be exactly one row in here, if not, it's because we forgot to set up the contest
-            this.roomCodeToGame.set(roomCode, new Game(players, roomCode, result.rows[0].prompt, result.rows[0].contest_id, this.gameOver));
+            const prompt = result.rows[0].prompt;
+            const contestId = result.rows[0].contest_id;
+            const subResult = await this.pool.query("INSERT INTO submissions(team_id, start_time, contest_id) VALUES($1, NOW(), $2) RETURNING id", [teamId, contestId]);
+            this.teamIdToGame.set(teamId, new Game(players, teamId, subResult.rows[0].id, prompt, this.gameOver, this.newEntry));
         } else {
             if (lobby) {
                 for (let player of lobby.players) {
@@ -96,21 +104,23 @@ class Orchestrator {
                 return;
             }
 
-            const { roomCode, playerIds } = await this.getTeamInfo(id);
+            const { teamId, playerIds } = await this.getTeamInfo(id);
 
             const newPlayer = new Player(id, socket, email);
-            if (this.roomCodeToGame.has(roomCode)) {
+            if (this.teamIdToGame.has(teamId)) {
                 console.log("adding himn to game that already started");
-                this.roomCodeToGame.get(roomCode)?.addPlayer(newPlayer);
+                this.teamIdToGame.get(teamId)?.addPlayer(newPlayer);
 
             }
-            else if (this.roomCodeToLobby.has(roomCode)) {
+            else if (this.teamIdToLobby.has(teamId)) {
                 //@ts-ignore
-                this.roomCodeToLobby.get(roomCode).addPlayer(newPlayer);
+                this.teamIdToLobby.get(teamId).addPlayer(newPlayer);
             }
             else {
-                let lobby = new Lobby([], roomCode, playerIds, this.leaveTeam, this.lobbyFinished);
-                this.roomCodeToLobby.set(roomCode, lobby);
+                console.log("creating lobby with ");
+                console.log(teamId)
+                let lobby = new Lobby([], teamId, playerIds, this.leaveTeam, this.lobbyFinished);
+                this.teamIdToLobby.set(teamId, lobby);
                 lobby.addPlayer(newPlayer);
 
             }
