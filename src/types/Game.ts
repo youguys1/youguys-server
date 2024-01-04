@@ -64,11 +64,9 @@ class Game {
                 player.socket.emit("not_your_turn");
             }
             else {
-                if (sentence !== "") {
-                    this.entries.push({ content: sentence, email: player.email });
-                    this.onNewEntry(sentence, this.submissionId, player.id);
-                    this.document += ". " + sentence;
-                }
+                this.entries.push({ content: sentence, email: player.email });
+                this.onNewEntry(sentence, this.submissionId, player.id);
+                this.document += ". " + sentence;
                 this.currentTurn += 1;
                 this.currentSecondsRemaining = TURN_LENGTH_SECONDS;
                 this.broadcastGameInfo();
