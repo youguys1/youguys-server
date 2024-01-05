@@ -14,7 +14,7 @@ export interface GameInfo {
     turnsRemaining: number;
 }
 
-const TURN_LENGTH_SECONDS = 15
+const TURN_LENGTH_SECONDS = 20
 
 class Game {
     public players: Array<Player>;
